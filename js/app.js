@@ -137,7 +137,7 @@ function computeNextBestActions(client) {
   if (urgent) {
     const d = daysUntil(urgent.date);
     actions.push({
-      priority: 'high', icon: '🎁',
+      priority: 'high', icon: 'M',
       title: urgent.description,
       sub: d === 0 ? 'Today!' : `${d} day${d !== 1 ? 's' : ''} away · ${formatDate(urgent.date)}`
     });
@@ -145,21 +145,21 @@ function computeNextBestActions(client) {
 
   // Overdue contact
   if (dsc > 60) {
-    actions.push({ priority: 'high', icon: '📞', title: `Reach out immediately — ${dsc} days without contact`, sub: `Last: ${client.lastTouchpoint.summary}` });
+    actions.push({ priority: 'high', icon: 'C', title: `Reach out immediately — ${dsc} days without contact`, sub: `Last: ${client.lastTouchpoint.summary}` });
   } else if (dsc > 30) {
-    actions.push({ priority: 'medium', icon: '📞', title: `Schedule a check-in call`, sub: `${dsc} days since last contact — ${client.lastTouchpoint.summary}` });
+    actions.push({ priority: 'medium', icon: 'C', title: `Schedule a check-in call`, sub: `${dsc} days since last contact — ${client.lastTouchpoint.summary}` });
   }
 
   // High priority open service request
   const highReq = client.serviceRequests.find(r => r.status !== 'completed' && r.priority === 'high');
   if (highReq) {
     const od = daysSince(highReq.createdDate);
-    actions.push({ priority: 'high', icon: '⚡', title: `Follow up: ${highReq.title}`, sub: `Open ${od} day${od !== 1 ? 's' : ''} · Due ${formatDate(highReq.dueDate)}` });
+    actions.push({ priority: 'high', icon: 'S', title: `Follow up: ${highReq.title}`, sub: `Open ${od} day${od !== 1 ? 's' : ''} · Due ${formatDate(highReq.dueDate)}` });
   }
 
   // Default fallback
   if (actions.length === 0) {
-    actions.push({ priority: 'low', icon: '📊', title: 'Review Q2 portfolio positioning', sub: 'Relationship is in great shape — no urgent actions' });
+    actions.push({ priority: 'low', icon: 'R', title: 'Review Q2 portfolio positioning', sub: 'Relationship is in great shape — no urgent actions' });
   }
 
   return actions.slice(0, 3);
@@ -311,6 +311,49 @@ function renderSidebar() {
   </aside>`;
 }
 
+// ─── ATTENTION STRIP ──────────────────────────────────────
+function renderAttentionStrip() {
+  const overdue = clients.filter(c => daysSince(c.lastTouchpoint.date) > 60);
+  const highReqs = clients.filter(c => c.serviceRequests.some(r => r.status !== 'completed' && r.priority === 'high'));
+  const upcoming7 = clients.filter(c => c.upcomingMilestones.some(m => { const d = daysUntil(m.date); return d >= 0 && d <= 7; }));
+
+  if (overdue.length === 0 && highReqs.length === 0 && upcoming7.length === 0) return '';
+
+  function names(arr) {
+    if (arr.length === 0) return 'None';
+    const shown = arr.slice(0, 2).map(c => c.displayName.split(' ')[0]);
+    return shown.join(', ') + (arr.length > 2 ? ` +${arr.length - 2}` : '');
+  }
+
+  return `
+  <div class="attention-strip">
+    ${overdue.length > 0 ? `
+    <div class="attention-tile red">
+      <div class="attention-tile-count">${overdue.length}</div>
+      <div class="attention-tile-body">
+        <div class="attention-tile-label">Overdue Contact</div>
+        <div class="attention-tile-names">${names(overdue)}</div>
+      </div>
+    </div>` : ''}
+    ${highReqs.length > 0 ? `
+    <div class="attention-tile amber">
+      <div class="attention-tile-count">${highReqs.length}</div>
+      <div class="attention-tile-body">
+        <div class="attention-tile-label">High-Priority Requests</div>
+        <div class="attention-tile-names">${names(highReqs)}</div>
+      </div>
+    </div>` : ''}
+    ${upcoming7.length > 0 ? `
+    <div class="attention-tile blue">
+      <div class="attention-tile-count">${upcoming7.length}</div>
+      <div class="attention-tile-body">
+        <div class="attention-tile-label">Milestones This Week</div>
+        <div class="attention-tile-names">${names(upcoming7)}</div>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
 // ─── ADVISOR VIEW ─────────────────────────────────────────
 function renderAdvisorView() {
   const totalAUM   = clients.reduce((s, c) => s + c.aum, 0);
@@ -384,6 +427,8 @@ function renderAdvisorView() {
       </div>
       <div class="filter-count">${filtered.length} of ${clients.length} clients</div>
     </div>
+
+    ${renderAttentionStrip()}
 
     ${filtered.length === 0
       ? `<div class="no-results"><div class="no-results-icon"></div><div class="no-results-title">No clients match your filters</div><div class="text-muted">Try adjusting your search or filters</div></div>`
@@ -485,7 +530,7 @@ function renderClientView() {
             <span class="tier-badge ${tierClass(client.tier)}">${tierLabel(client.tier)}</span>
           </div>
           <div class="banner-meta">
-            <div class="banner-meta-item">📍 ${client.location}</div>
+            <div class="banner-meta-item">${client.location}</div>
             <span class="banner-meta-sep">·</span>
             <div class="banner-meta-item">Advisor: ${client.advisor}</div>
             <span class="banner-meta-sep">·</span>
@@ -580,7 +625,7 @@ function renderOverviewTab(client) {
       <div class="action-items">
         ${actions.map(a => `
           <div class="action-item ${a.priority}">
-            <div class="action-priority-dot ${a.priority}"></div>
+            <div class="action-icon-badge ${a.priority}">${a.icon}</div>
             <div class="action-text">
               <div class="action-title">${a.title}</div>
               <div class="action-sub">${a.sub}</div>
@@ -648,22 +693,29 @@ function renderOverviewTab(client) {
 
   <div class="panel-card">
     <div class="panel-title">Client Profile</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div>
-        <div class="meta-label" style="margin-bottom:4px">Preferred Name</div>
-        <div style="font-size:13px;margin-bottom:12px">${client.preferredName}</div>
-        <div class="meta-label" style="margin-bottom:4px">Communication</div>
-        <div style="font-size:13px;margin-bottom:12px;color:var(--text-2)">${client.preferences.communication}</div>
-        <div class="meta-label" style="margin-bottom:4px">Interests</div>
-        <div style="font-size:13px;color:var(--text-2)">${client.preferences.interests}</div>
+    <div class="profile-grid">
+      <div class="profile-field">
+        <div class="profile-field-label">Preferred Name</div>
+        <div class="profile-field-value">${client.preferredName}</div>
       </div>
-      <div>
-        <div class="meta-label" style="margin-bottom:4px">Household</div>
-        ${client.household.map(h => `
-          <div style="font-size:13px;margin-bottom:4px"><strong>${h.name}</strong> · ${h.relationship}</div>`).join('')}
-        <div class="meta-label" style="margin-top:12px;margin-bottom:4px">Advisor Notes</div>
-        <div style="font-size:13px;color:var(--text-2);line-height:1.5;font-style:italic">"${client.preferences.notes}"</div>
+      <div class="profile-field">
+        <div class="profile-field-label">Communication</div>
+        <div class="profile-field-value">${client.preferences.communication}</div>
       </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Interests</div>
+        <div class="profile-field-value">${client.preferences.interests}</div>
+      </div>
+      <div class="profile-field">
+        <div class="profile-field-label">Household</div>
+        <div class="profile-field-value">
+          ${client.household.map(h => `<div><strong>${h.name}</strong> · <span style="color:var(--text-secondary)">${h.relationship}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="profile-notes">
+      <div class="profile-field-label" style="margin-bottom:8px">Advisor Notes</div>
+      <div class="profile-notes-body">"${client.preferences.notes}"</div>
     </div>
   </div>`;
 }
@@ -733,10 +785,11 @@ function renderServiceTab(client) {
   </div>
   <div class="requests-list">
     ${open.length === 0 && closed.length === 0
-      ? `<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No service requests</div><div class="empty-sub">All clear — no open items</div></div>`
+      ? `<div class="empty-state"><div class="empty-title">No service requests</div><div class="empty-sub">All clear — no open items</div></div>`
       : [...open, ...closed].map(reqCard).join('')}
   </div>`;
 }
+
 
 // ── Holdings Tab ──────────────────────────────────────────
 function renderHoldingsTab(client) {
