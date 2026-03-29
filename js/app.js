@@ -72,7 +72,7 @@ function healthClass(label) {
 }
 
 function touchpointIcon(type) {
-  return { meeting: '🤝', phone_call: '📞', gift_sent: '🎁', email: '✉️', event: '🎉', annual_review: '📋', video_call: '💻' }[type] || '📌';
+  return { meeting: 'M', phone_call: 'C', gift_sent: 'G', email: 'E', event: 'V', annual_review: 'R', video_call: 'V' }[type] || '·';
 }
 
 function touchpointClass(type) {
@@ -231,19 +231,19 @@ function renderSidebar() {
         </div>
       </div>
       <nav class="sidebar-nav">
-        <div class="nav-label">Navigation</div>
+        <div class="nav-label">Workspace</div>
         <button class="nav-item active" data-nav="advisor">
-          <span class="nav-icon">📊</span> Book of Business
+          Book of Business
         </button>
-        <button class="nav-item" disabled style="opacity:0.4;cursor:default">
-          <span class="nav-icon">📅</span> My Calendar
+        <button class="nav-item" disabled style="opacity:0.35;cursor:default">
+          Calendar
         </button>
-        <button class="nav-item" disabled style="opacity:0.4;cursor:default">
-          <span class="nav-icon">✅</span> Tasks
+        <button class="nav-item" disabled style="opacity:0.35;cursor:default">
+          Tasks
           ${openTasks > 0 ? `<span class="nav-badge">${openTasks}</span>` : ''}
         </button>
-        <button class="nav-item" disabled style="opacity:0.4;cursor:default">
-          <span class="nav-icon">📝</span> Reports
+        <button class="nav-item" disabled style="opacity:0.35;cursor:default">
+          Reports
         </button>
       </nav>
       <div class="sidebar-footer">
@@ -266,11 +266,11 @@ function renderSidebar() {
   // Client view sidebar
   const client = clients.find(c => c.id === state.clientId);
   const tabs = [
-    { id: 'overview', icon: '🏠', label: 'Overview' },
-    { id: 'touchpoints', icon: '🤝', label: 'Touchpoints' },
-    { id: 'service', icon: '⚡', label: 'Service Requests' },
-    { id: 'holdings', icon: '📈', label: 'Holdings' },
-    { id: 'transactions', icon: '🔄', label: 'Transactions' }
+    { id: 'overview',     label: 'Overview' },
+    { id: 'touchpoints',  label: 'Touchpoints' },
+    { id: 'service',      label: 'Service Requests' },
+    { id: 'holdings',     label: 'Holdings' },
+    { id: 'transactions', label: 'Transactions' }
   ];
   return `
   <aside class="sidebar">
@@ -294,7 +294,7 @@ function renderSidebar() {
       <div class="nav-label">Client View</div>
       ${tabs.map(t => `
         <button class="nav-item ${state.activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
-          <span class="nav-icon">${t.icon}</span> ${t.label}
+          ${t.label}
         </button>`).join('')}
     </nav>
     <div class="sidebar-footer">
@@ -324,7 +324,7 @@ function renderAdvisorView() {
   <div class="main-header">
     <div class="header-title">Book of Business</div>
     <div class="header-search">
-      <span class="header-search-icon">🔍</span>
+      <span class="header-search-icon">◎</span>
       <input type="text" id="search-input" placeholder="Search clients…" value="${state.filter.search}">
     </div>
     <div class="header-spacer"></div>
@@ -386,7 +386,7 @@ function renderAdvisorView() {
     </div>
 
     ${filtered.length === 0
-      ? `<div class="no-results"><div class="no-results-icon">🔍</div><div class="no-results-title">No clients match your filters</div><div class="text-muted">Try adjusting your search or filters</div></div>`
+      ? `<div class="no-results"><div class="no-results-icon"></div><div class="no-results-title">No clients match your filters</div><div class="text-muted">Try adjusting your search or filters</div></div>`
       : `<div class="clients-grid">${filtered.map(renderClientCard).join('')}</div>`
     }
   </div>`;
@@ -464,63 +464,55 @@ function renderClientView() {
     </div>
     <div class="header-spacer"></div>
     <div class="header-actions">
-      <button class="header-btn">📞 Log Touchpoint</button>
-      <button class="header-btn primary">+ Service Request</button>
+      <button class="header-btn-text">Log Touchpoint</button>
+      <button class="header-btn-text primary">+ Service Request</button>
     </div>
     <div class="header-avatar">${advisor.initials}</div>
   </div>
 
   <div class="main-content">
     <div class="client-banner">
-      <div class="client-banner-top ${stripeClass(client.healthScore)}"></div>
-      <div class="client-banner-body">
+      <div class="banner-stripe ${hc}"></div>
+      <div class="banner-top">
         <div class="client-avatar-lg">${client.initials}</div>
-        <div class="client-banner-info">
-          <div class="client-banner-name">
+        <div class="banner-info">
+          <div class="banner-name">
             ${client.displayName}
             <span class="tier-badge ${tierClass(client.tier)}">${tierLabel(client.tier)}</span>
           </div>
-          <div class="client-banner-meta">
-            <div class="banner-meta-item">
-              <span class="banner-meta-label">AUM</span>
-              <span class="banner-aum">${formatCurrency(client.aum)}</span>
-            </div>
-            <div class="banner-divider"></div>
-            <div class="banner-meta-item">
-              <span class="banner-meta-label">YTD Return</span>
-              <span class="banner-meta-value" style="color:var(--green)">+${(client.aumGrowthYTD*100).toFixed(1)}%</span>
-            </div>
-            <div class="banner-divider"></div>
-            <div class="banner-meta-item">
-              <span class="banner-meta-label">Advisor</span>
-              <span class="banner-meta-value">${client.advisor}</span>
-            </div>
-            <div class="banner-divider"></div>
-            <div class="banner-meta-item">
-              <span class="banner-meta-label">Client Since</span>
-              <span class="banner-meta-value">${formatDate(client.joinDate)} (${tenure} yrs)</span>
-            </div>
-            <div class="banner-divider"></div>
-            <div class="banner-meta-item">
-              <span class="banner-meta-label">Location</span>
-              <span class="banner-meta-value">${client.location}</span>
-            </div>
+          <div class="banner-meta">
+            <div class="banner-meta-item">📍 ${client.location}</div>
+            <span class="banner-meta-sep">·</span>
+            <div class="banner-meta-item">Advisor: ${client.advisor}</div>
+            <span class="banner-meta-sep">·</span>
+            <div class="banner-meta-item">Client since ${new Date(client.joinDate+'T00:00:00').getFullYear()} &nbsp;·&nbsp; ${tenure} yrs</div>
           </div>
         </div>
-        <div class="banner-health">
-          <div class="health-score-circle ${hc}">
-            <div class="health-score-num">${client.healthScore}</div>
+        <div class="banner-right">
+          <div class="banner-stat">
+            <div class="banner-stat-label">Assets Under Management</div>
+            <div class="banner-stat-value">${formatCurrency(client.aum)}</div>
+            <div class="banner-stat-sub" style="color:var(--green)">+${(client.aumGrowthYTD*100).toFixed(1)}% YTD</div>
           </div>
-          <div class="health-score-label">${client.healthLabel}</div>
+          <div class="banner-vdivider"></div>
+          <div class="health-score-block">
+            <div class="health-score-num ${hc}">${client.healthScore}</div>
+            <div class="health-score-label ${hc}">${client.healthLabel}</div>
+            <div class="health-score-sub">Relationship Health</div>
+          </div>
         </div>
       </div>
+      ${client.tags && client.tags.length ? `
+      <div class="banner-tags">
+        ${client.tags.map(t => `<span class="tag">${t.replace(/-/g,' ')}</span>`).join('')}
+      </div>` : ''}
     </div>
 
     <div class="client-tabs" id="tab-bar">
       ${[
         { id: 'overview',      label: 'Overview',           badge: null },
         { id: 'touchpoints',   label: 'Touchpoints',        badge: client.touchpoints.length },
-        { id: 'service',       label: 'Service Requests',   badge: client.serviceRequests.filter(r=>r.status!=='completed').length || null },
+        { id: 'service',       label: 'Service',   badge: client.serviceRequests.filter(r=>r.status!=='completed').length || null },
         { id: 'holdings',      label: 'Holdings',           badge: null },
         { id: 'transactions',  label: 'Transactions',       badge: null }
       ].map(t => `
@@ -580,11 +572,11 @@ function renderOverviewTab(client) {
 
   <div class="overview-grid">
     <div class="panel-card">
-      <div class="panel-title">⚡ Next Best Actions</div>
+      <div class="panel-title">Recommended Actions</div>
       <div class="action-items">
         ${actions.map(a => `
           <div class="action-item ${a.priority}">
-            <span class="action-icon">${a.icon}</span>
+            <div class="action-priority-dot ${a.priority}"></div>
             <div class="action-text">
               <div class="action-title">${a.title}</div>
               <div class="action-sub">${a.sub}</div>
@@ -594,7 +586,7 @@ function renderOverviewTab(client) {
     </div>
 
     <div class="panel-card">
-      <div class="panel-title">🗓 Upcoming Moments</div>
+      <div class="panel-title">Upcoming Moments</div>
       ${futureMilestones.length === 0
         ? `<div class="empty-state" style="padding:20px"><div class="empty-sub">No upcoming milestones in next 90 days</div></div>`
         : `<div class="moments-list">${futureMilestones.map(m => {
@@ -616,7 +608,7 @@ function renderOverviewTab(client) {
   </div>
 
   <div class="panel-card" style="margin-bottom:16px">
-    <div class="panel-title">📊 LTV Breakdown <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--text-2)">— Projected LTV: ${formatCurrency(ltv.projectedLTV)}</span></div>
+    <div class="panel-title">Relationship Value <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--text-2)">— Projected LTV: ${formatCurrency(ltv.projectedLTV)}</span></div>
     <div class="ltv-grid">
       <div class="ltv-metric"><div class="ltv-metric-value">${formatCurrency(ltv.estimatedAnnualRevenue)}</div><div class="ltv-metric-label">Annual Revenue</div></div>
       <div class="ltv-metric"><div class="ltv-metric-value">${formatCurrency(ltv.projectedLTV)}</div><div class="ltv-metric-label">Projected LTV</div></div>
@@ -639,7 +631,7 @@ function renderOverviewTab(client) {
   </div>
 
   <div class="panel-card">
-    <div class="panel-title">🗒 Client Profile</div>
+    <div class="panel-title">Client Profile</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div>
         <div class="meta-label" style="margin-bottom:4px">Preferred Name</div>
@@ -890,7 +882,7 @@ function attachEventListeners() {
       const grid = document.querySelector('.clients-grid, .no-results');
       const countEl = document.querySelector('.filter-count');
       if (grid) grid.outerHTML = filtered.length === 0
-        ? `<div class="no-results"><div class="no-results-icon">🔍</div><div class="no-results-title">No clients match</div></div>`
+        ? `<div class="no-results"><div class="no-results-icon"></div><div class="no-results-title">No clients match</div></div>`
         : `<div class="clients-grid">${filtered.map(renderClientCard).join('')}</div>`;
       if (countEl) countEl.textContent = filtered.length + ' of ' + clients.length + ' clients';
     });
