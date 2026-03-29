@@ -968,32 +968,69 @@ a { text-decoration: none; color: inherit; }
 .moment-badge.upcoming{ background: var(--amber-bg); color: var(--amber-text); }
 .moment-badge.planned { background: var(--green-bg); color: var(--green-text); }
 
-/* LTV Panel */
-.ltv-panel {
-  display: grid; grid-template-columns: 1fr 1fr;
+/* LTV / Relationship Value Panel */
+.rv-headline {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; margin-bottom: 14px;
+}
+.rv-stat-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 14px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.rv-stat-value {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -.5px;
+}
+.rv-stat-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+.rv-score-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr);
   gap: 10px;
 }
-.ltv-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-light);
+.rv-score-tile {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 10px 12px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px;
 }
-.ltv-row:last-child { border-bottom: none; }
-.ltv-key {
-  font-size: 12px; color: var(--text-secondary);
+.rv-score-num {
+  font-family: var(--font-display);
+  font-size: 28px; font-weight: 700;
+  color: var(--primary);
+  line-height: 1;
 }
-.ltv-val {
-  font-size: 13px; font-weight: 700;
-  color: var(--text-primary);
+.rv-score-num.score-high { color: var(--green-text); }
+.rv-score-num.score-mid  { color: var(--amber-text); }
+.rv-score-num.score-low  { color: var(--red); }
+.rv-score-label {
+  font-size: 10px; font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: .05em;
+  text-align: center; line-height: 1.3;
 }
-.ltv-score-bar {
-  height: 4px; background: var(--border); border-radius: 2px;
-  overflow: hidden; margin-top: 3px;
+.rv-score-bar {
+  width: 100%; height: 3px;
+  background: var(--border);
+  border-radius: 2px; overflow: hidden;
+  margin-top: 2px;
 }
-.ltv-score-fill {
+.rv-score-bar-fill {
   height: 100%; border-radius: 2px;
   background: linear-gradient(90deg, var(--primary), var(--accent));
 }
+.rv-score-tile.score-high-tile { border-color: rgba(16,128,80,.18); }
+.rv-score-tile.score-mid-tile  { border-color: rgba(180,120,20,.18); }
+.rv-score-tile.score-low-tile  { border-color: rgba(200,40,40,.18); }
 
 /* 19. TOUCHPOINTS TAB */
 .tp-header {

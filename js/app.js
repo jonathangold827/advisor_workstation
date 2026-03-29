@@ -612,25 +612,37 @@ function renderOverviewTab(client) {
   </div>
 
   <div class="panel-card" style="margin-bottom:16px">
-    <div class="panel-title">Relationship Value <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--text-2)">— Projected LTV: ${formatCurrency(ltv.projectedLTV)}</span></div>
-    <div class="ltv-grid">
-      <div class="ltv-metric"><div class="ltv-metric-value">${formatCurrency(ltv.estimatedAnnualRevenue)}</div><div class="ltv-metric-label">Annual Revenue</div></div>
-      <div class="ltv-metric"><div class="ltv-metric-value">${formatCurrency(ltv.projectedLTV)}</div><div class="ltv-metric-label">Projected LTV</div></div>
-      <div class="ltv-metric"><div class="ltv-metric-value">${ltv.referralsGiven}</div><div class="ltv-metric-label">Referrals Given</div></div>
+    <div class="panel-title">Relationship Value</div>
+    <div class="rv-headline">
+      <div class="rv-stat-tile">
+        <div class="rv-stat-value">${formatCurrency(ltv.estimatedAnnualRevenue)}</div>
+        <div class="rv-stat-label">Annual Revenue</div>
+      </div>
+      <div class="rv-stat-tile">
+        <div class="rv-stat-value">${formatCurrency(ltv.projectedLTV)}</div>
+        <div class="rv-stat-label">Projected LTV</div>
+      </div>
+      <div class="rv-stat-tile">
+        <div class="rv-stat-value">${ltv.referralsGiven}</div>
+        <div class="rv-stat-label">Referrals Given</div>
+      </div>
     </div>
-    <div class="ltv-score-bars">
+    <div class="rv-score-grid">
       ${[
-        ['Revenue Potential', ltv.revenueScore],
-        ['Engagement Quality', ltv.engagementScore],
-        ['Growth Trajectory', ltv.growthScore],
+        ['Revenue Potential',    ltv.revenueScore],
+        ['Engagement Quality',   ltv.engagementScore],
+        ['Growth Trajectory',    ltv.growthScore],
         ['Relationship Breadth', ltv.breadthScore],
-        ['Tenure & Loyalty', ltv.tenureScore]
-      ].map(([label, score]) => `
-        <div class="score-bar-row">
-          <span class="score-bar-label">${label}</span>
-          <div class="score-bar-track"><div class="score-bar-fill" style="width:${score * 10}%"></div></div>
-          <span class="score-bar-val">${score}</span>
-        </div>`).join('')}
+        ['Tenure & Loyalty',     ltv.tenureScore]
+      ].map(([label, score]) => {
+        const sc = score >= 8 ? 'high' : score >= 6 ? 'mid' : 'low';
+        return `
+        <div class="rv-score-tile score-${sc}-tile">
+          <div class="rv-score-num score-${sc}">${score}</div>
+          <div class="rv-score-label">${label}</div>
+          <div class="rv-score-bar"><div class="rv-score-bar-fill" style="width:${score * 10}%"></div></div>
+        </div>`;
+      }).join('')}
     </div>
   </div>
 
