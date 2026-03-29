@@ -396,53 +396,57 @@ function renderClientCard(client) {
   const dsc = daysSince(client.lastTouchpoint.date);
   const nextMilestone = client.upcomingMilestones.find(m => daysUntil(m.date) >= 0);
   const openSR = client.serviceRequests.filter(r => r.status !== 'completed').length;
+  const hc = healthColor(client.healthScore);
+  const du = nextMilestone ? daysUntil(nextMilestone.date) : null;
 
   return `
   <div class="client-card" data-client-id="${client.id}">
-    <div class="card-health-stripe ${stripeClass(client.healthScore)}"></div>
+    <div class="card-health-stripe ${hc}"></div>
     <div class="card-body">
-      <div class="card-top">
-        <div>
-          <span class="tier-badge ${tierClass(client.tier)}">${tierLabel(client.tier)}</span>
-          <span class="health-badge ${healthClass(client.healthLabel)}" style="margin-left:4px">
-            <span class="health-dot dot-${healthColor(client.healthScore)}"></span>
-            ${client.healthScore} ${client.healthLabel}
-          </span>
+
+      <div class="card-top-row">
+        <div class="card-name">${client.displayName}</div>
+        <span class="tier-badge ${tierClass(client.tier)}">${tierLabel(client.tier)}</span>
+      </div>
+
+      <div class="card-aum-row">
+        <span class="card-aum">${formatCurrency(client.aum)}</span>
+        <span class="card-aum-growth ${client.aumGrowthYTD >= 0 ? 'positive' : 'negative'}">
+          ${client.aumGrowthYTD >= 0 ? '+' : ''}${(client.aumGrowthYTD * 100).toFixed(1)}%
+        </span>
+        <span class="card-health-pill ${hc}">
+          <span class="health-dot ${hc}"></span>${client.healthScore}
+        </span>
+      </div>
+
+      <div class="card-metrics-row">
+        <div class="card-metric">
+          <div class="metric-label">Last Contact</div>
+          <div class="metric-value ${contactColor(dsc)}">${contactLabel(dsc)}</div>
+        </div>
+        <div class="card-metric-divider"></div>
+        <div class="card-metric">
+          <div class="metric-label">Open Tasks</div>
+          <div class="metric-value ${client.openTasks > 2 ? 'overdue' : client.openTasks > 0 ? 'nudge' : 'good'}">${client.openTasks > 0 ? client.openTasks + ' pending' : 'Clear'}</div>
+        </div>
+        <div class="card-metric-divider"></div>
+        <div class="card-metric">
+          <div class="metric-label">Service Requests</div>
+          <div class="metric-value ${openSR > 1 ? 'overdue' : openSR > 0 ? 'nudge' : ''}">${openSR > 0 ? openSR + ' open' : 'None'}</div>
         </div>
       </div>
-      <div class="card-name">${client.displayName}</div>
-      <div>
-        <div class="card-aum">${formatCurrency(client.aum)}</div>
-        <div class="card-aum-label">Assets Under Management · ${(client.aumGrowthYTD * 100).toFixed(1)}% YTD</div>
-      </div>
-      <div class="card-meta">
-        <div class="card-meta-item">
-          <span class="meta-label">Last Contact</span>
-          <span class="meta-value ${contactColor(dsc)}">${contactLabel(dsc)}</span>
-        </div>
-        <div class="card-meta-item">
-          <span class="meta-label">Open Tasks</span>
-          <span class="meta-value ${client.openTasks > 2 ? 'overdue' : ''}">${client.openTasks > 0 ? client.openTasks + ' pending' : 'All clear ✓'}</span>
-        </div>
-        <div class="card-meta-item">
-          <span class="meta-label">Location</span>
-          <span class="meta-value text-muted">${client.location}</span>
-        </div>
-        <div class="card-meta-item">
-          <span class="meta-label">Service Reqs</span>
-          <span class="meta-value ${openSR > 2 ? 'overdue' : ''}">${openSR > 0 ? openSR + ' open' : 'None open'}</span>
-        </div>
-      </div>
+
       ${nextMilestone ? `
-      <div class="milestone-chip">
-        <span class="milestone-icon">🗓</span>
-        <span>${nextMilestone.description} · ${daysUntil(nextMilestone.date) <= 0 ? 'Today' : daysUntil(nextMilestone.date) + 'd'}</span>
-      </div>` : ''}
+      <div class="card-milestone">
+        <span class="milestone-dot"></span>
+        ${nextMilestone.description}
+        <span class="milestone-days">${du === 0 ? 'Today' : du + 'd'}</span>
+      </div>` : '<div class="card-milestone-empty"></div>'}
+
     </div>
     <div class="card-footer">
-      <button class="card-action-btn" data-log-call="${client.id}">📞 Log Call</button>
-      <button class="card-action-btn" data-add-task="${client.id}">✅ Add Task</button>
-      <button class="card-action-primary" data-client-id="${client.id}">View Profile →</button>
+      <span class="card-footer-meta">${touchpointLabel(client.lastTouchpoint.type)} · ${formatDateShort(client.lastTouchpoint.date)}</span>
+      <button class="card-view-btn" data-client-id="${client.id}">View Profile</button>
     </div>
   </div>`;
 }

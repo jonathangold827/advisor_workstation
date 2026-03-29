@@ -490,83 +490,116 @@ a { text-decoration: none; color: inherit; }
 .card-health-stripe.red    { background: var(--red);   }
 
 .card-body {
-  padding: 20px 20px 0;
+  padding: 22px 22px 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
-.card-top {
+
+/* Row 1: Name + Tier */
+.card-top-row {
   display: flex; align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 14px;
+  justify-content: space-between; gap: 10px;
 }
 .card-name {
   font-family: var(--font-display);
   font-size: 15px; font-weight: 400;
   color: var(--text-primary);
-  line-height: 1.35;
-  letter-spacing: .1px;
+  line-height: 1.4;
 }
-.card-preferred {
-  font-size: 11px; color: var(--text-muted);
-  margin-top: 3px; letter-spacing: .2px;
-}
+
+/* Row 2: AUM + YTD + Health pill */
 .card-aum-row {
-  display: flex; align-items: baseline; gap: 10px;
-  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 10px;
 }
 .card-aum {
   font-family: var(--font-display);
-  font-size: 24px; font-weight: 400;
+  font-size: 26px; font-weight: 400;
   color: var(--primary);
   letter-spacing: -.3px;
+  line-height: 1;
 }
 .card-aum-growth {
   font-size: 11px; font-weight: 500;
   padding: 2px 7px;
   border-radius: var(--r-sm);
-  letter-spacing: .2px;
 }
 .card-aum-growth.positive { background: var(--green-bg); color: var(--green-text); }
 .card-aum-growth.negative { background: var(--red-bg);   color: var(--red-text);   }
-.card-metrics {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 12px; margin-bottom: 16px;
+.card-health-pill {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 600;
+}
+.card-health-pill.green { color: var(--green-text); }
+.card-health-pill.amber { color: var(--amber-text); }
+.card-health-pill.red   { color: var(--red-text);   }
+.health-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.health-dot.green { background: var(--green); }
+.health-dot.amber { background: var(--amber); }
+.health-dot.red   { background: var(--red); }
+
+/* Row 3: Metrics — 3-column horizontal */
+.card-metrics-row {
+  display: flex; align-items: stretch;
+  border: 1px solid var(--border-light);
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--bg);
+}
+.card-metric {
+  flex: 1; padding: 10px 12px;
+}
+.card-metric-divider {
+  width: 1px; background: var(--border-light); flex-shrink: 0;
 }
 .metric-label {
-  font-size: 9.5px; font-weight: 500;
+  font-size: 9px; font-weight: 500;
   color: var(--text-muted);
   text-transform: uppercase; letter-spacing: .8px;
   margin-bottom: 4px;
 }
 .metric-value {
-  font-size: 12.5px; font-weight: 500;
+  font-size: 12px; font-weight: 500;
   color: var(--text-primary);
-  display: flex; align-items: center; gap: 4px;
 }
-.metric-value.overdue  { color: var(--red);   }
-.metric-value.nudge    { color: var(--amber); }
-.metric-value.good     { color: var(--green); }
-.metric-sub {
-  font-size: 10.5px; color: var(--text-muted); margin-top: 2px;
-}
-.card-nba {
+.metric-value.overdue { color: var(--red); }
+.metric-value.nudge   { color: var(--amber); }
+.metric-value.good    { color: var(--green); }
+
+/* Row 4: Milestone */
+.card-milestone {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
   background: var(--accent-light);
-  border: 1px solid rgba(184,146,60,.2);
+  border: 1px solid rgba(184,146,60,.18);
   border-radius: var(--r-sm);
-  padding: 8px 11px;
-  margin-bottom: 16px;
-  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 12px; color: var(--amber-text);
 }
-.nba-icon { font-size: 11px; flex-shrink: 0; margin-top: 2px; color: var(--accent); }
-.nba-text {
-  font-size: 11.5px; font-weight: 400;
-  color: var(--amber-text);
-  line-height: 1.45;
+.card-milestone-empty { height: 4px; }
+.milestone-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
 }
+.milestone-days {
+  margin-left: auto;
+  font-size: 11px; font-weight: 600;
+  color: var(--accent);
+}
+
+/* Footer */
 .card-footer {
-  padding: 12px 20px;
+  padding: 12px 22px;
   border-top: 1px solid var(--border-light);
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center;
   background: var(--bg);
+}
+.card-footer-meta {
+  font-size: 11px; color: var(--text-muted);
+  letter-spacing: .2px;
 }
 .card-action-btn {
   padding: 5px 11px;
@@ -582,17 +615,18 @@ a { text-decoration: none; color: inherit; }
 .card-action-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 .card-view-btn {
   margin-left: auto;
-  padding: 5px 13px;
+  padding: 6px 14px;
   border-radius: var(--r-sm);
-  font-size: 11px; font-weight: 600;
+  font-size: 11.5px; font-weight: 500;
   background: var(--primary);
   color: #fff;
   cursor: pointer;
-  transition: background .15s, opacity .15s;
-  display: flex; align-items: center; gap: 5px;
+  border: none;
+  transition: opacity .15s;
   letter-spacing: .3px;
+  white-space: nowrap;
 }
-.card-view-btn:hover { opacity: .85; }
+.card-view-btn:hover { opacity: .82; }
 
 /* 13. TIER BADGE — refined, understated */
 .tier-badge {
