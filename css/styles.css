@@ -1108,103 +1108,175 @@ a { text-decoration: none; color: inherit; }
   line-height: 1.6; font-style: italic;
 }
 
-/* 19. TOUCHPOINTS TAB */
-.tp-header {
+/* 19. SHARED TAB ELEMENTS */
+.tab-section-header {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
-.tp-count { font-size: 13px; color: var(--text-muted); }
-.btn-primary {
-  padding: 8px 16px;
+.tab-section-title {
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
+}
+.btn-outline-sm {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
   border-radius: var(--r-full);
-  background: var(--primary);
-  color: #fff;
-  font-size: 13px; font-weight: 600;
+  background: var(--bg-card);
+  color: var(--primary);
+  font-size: 12px; font-weight: 600;
   cursor: pointer;
-  transition: background .15s;
-  display: flex; align-items: center; gap: 6px;
+  transition: border-color .15s, background .15s;
 }
-.btn-primary:hover { background: var(--primary-hover); }
-.timeline {
-  position: relative;
-  padding-left: 28px;
+.btn-outline-sm:hover { border-color: var(--primary); background: var(--primary-light); }
+
+/* Shared data table */
+.data-table {
+  width: 100%; border-collapse: collapse;
 }
-.timeline::before {
-  content: '';
-  position: absolute; left: 10px; top: 0; bottom: 0;
-  width: 2px; background: var(--border);
+.data-table thead th {
+  padding: 10px 16px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
 }
-.tp-item {
-  position: relative;
-  margin-bottom: 16px;
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  transition: background .1s;
 }
-.tp-dot {
-  position: absolute; left: -28px; top: 14px;
-  width: 22px; height: 22px;
-  border-radius: var(--r-full);
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--primary-light); }
+.data-table td { padding: 12px 16px; vertical-align: middle; }
+.data-table-primary {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 1px;
+}
+.data-table-sub {
+  font-size: 11.5px; color: var(--text-muted);
+}
+.data-table-note {
+  font-size: 12px; color: var(--text-secondary);
+  line-height: 1.4; max-width: 300px;
+}
+.data-table-num {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+  text-align: right; white-space: nowrap;
+}
+
+/* Touchpoint icon cell */
+.tp-icon-cell {
+  width: 28px; height: 28px;
+  border-radius: var(--r-sm);
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px;
-  border: 2px solid var(--bg-card);
-  z-index: 1;
+  font-size: 11px; font-weight: 800;
 }
-.tp-dot.meeting      { background: var(--primary);  }
-.tp-dot.phone_call   { background: var(--green);    }
-.tp-dot.video_call   { background: var(--purple);   }
-.tp-dot.email        { background: var(--blue);     }
-.tp-dot.gift_sent    { background: var(--accent);   }
-.tp-dot.event        { background: #EC4899;          }
-.tp-dot.annual_review{ background: #0891B2;          }
-.tp-card {
+.sentiment-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600;
+  text-transform: capitalize;
+}
+.sentiment-dot-sm {
+  width: 5px; height: 5px;
+  border-radius: 50%; flex-shrink: 0;
+}
+
+/* Service request priority badge */
+.priority-dot-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  font-size: 10px; font-weight: 800;
+  letter-spacing: .05em;
+}
+
+/* Holdings donut */
+.holdings-overview {
+  display: flex; gap: 24px; align-items: center;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  padding: 14px 16px;
-  box-shadow: var(--shadow-xs);
-  transition: border-color .15s;
+  padding: 20px 24px;
+  margin-bottom: 0;
 }
-.tp-card:hover { border-color: #c0d0e0; }
-.tp-card-top {
-  display: flex; align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
+.donut-wrap {
+  position: relative; flex-shrink: 0;
+  width: 120px; height: 120px;
 }
-.tp-type-badge {
-  display: inline-flex; align-items: center; gap: 4px;
-  padding: 3px 9px;
-  border-radius: var(--r-full);
-  font-size: 11px; font-weight: 700;
+.donut-svg { width: 120px; height: 120px; }
+.donut-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: none;
 }
-.tp-type-badge.meeting      { background: var(--primary-light); color: var(--primary); }
-.tp-type-badge.phone_call   { background: var(--green-bg);      color: var(--green-text); }
-.tp-type-badge.video_call   { background: var(--purple-bg);     color: var(--purple-text); }
-.tp-type-badge.email        { background: var(--blue-bg);       color: var(--blue-text); }
-.tp-type-badge.gift_sent    { background: var(--accent-light);  color: var(--amber-text); }
-.tp-type-badge.event        { background: #FCE7F3;              color: #9D174D; }
-.tp-type-badge.annual_review{ background: #CFFAFE;              color: #164E63; }
-.tp-date {
-  font-size: 11px; color: var(--text-muted); font-weight: 500;
+.donut-center-val {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 700;
+  color: var(--primary); line-height: 1;
 }
-.tp-title {
-  font-size: 14px; font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+.donut-center-label {
+  font-size: 9px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em;
+  color: var(--text-muted); margin-top: 2px;
 }
-.tp-notes {
-  font-size: 13px; color: var(--text-secondary);
-  line-height: 1.5;
-  margin-bottom: 8px;
+.donut-legend {
+  flex: 1; display: flex; flex-direction: column; gap: 7px;
 }
-.tp-footer {
-  display: flex; align-items: center; gap: 12px;
+.donut-legend-row {
+  display: flex; align-items: center; gap: 10px;
 }
-.tp-meta {
-  font-size: 11px; color: var(--text-muted);
-  display: flex; align-items: center; gap: 4px;
+.donut-legend-dot {
+  width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
 }
-.sentiment-dot {
-  width: 6px; height: 6px; border-radius: var(--r-full);
+.donut-legend-label {
+  flex: 1; font-size: 12px; color: var(--text-secondary);
+}
+.donut-legend-pct {
+  font-size: 12px; font-weight: 700; color: var(--text-primary);
+  min-width: 38px; text-align: right;
+}
+.donut-legend-val {
+  font-size: 12px; color: var(--text-muted);
+  min-width: 72px; text-align: right;
+}
+
+/* Asset type dot in table */
+.asset-type-dot {
   display: inline-block;
+  width: 7px; height: 7px; border-radius: 2px;
+  margin-right: 5px; vertical-align: middle; flex-shrink: 0;
 }
+
+/* Allocation bar (holdings table) */
+.alloc-bar-wrap {
+  display: flex; align-items: center; gap: 8px; min-width: 120px;
+}
+.alloc-bar {
+  flex: 1; height: 4px; background: var(--border);
+  border-radius: 2px; overflow: hidden;
+}
+.alloc-fill { height: 100%; border-radius: 2px; }
+
+/* Transaction type badge */
+.tx-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-sm);
+  font-size: 10px; font-weight: 700;
+  letter-spacing: .04em; white-space: nowrap;
+}
+.tx-buy          { background: var(--green-bg);      color: var(--green-text); }
+.tx-sell         { background: rgba(200,40,40,.09);  color: var(--red); }
+.tx-dividend     { background: var(--blue-bg);       color: var(--blue-text); }
+.tx-contribution { background: var(--primary-light); color: var(--primary); }
+.tx-fee          { background: rgba(100,100,100,.08);color: var(--text-secondary); }
+.tx-interest     { background: var(--accent-light);  color: var(--accent); }
+.tx-rebalance    { background: var(--purple-bg);     color: var(--purple-text); }
+.tx-withdrawal   { background: rgba(200,40,40,.09);  color: var(--red); }
+
+.sentiment-dot { width: 6px; height: 6px; border-radius: var(--r-full); display: inline-block; }
 .sentiment-dot.positive { background: var(--green); }
 .sentiment-dot.neutral  { background: var(--amber); }
 .sentiment-dot.negative { background: var(--red);   }

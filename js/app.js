@@ -722,30 +722,61 @@ function renderOverviewTab(client) {
 
 // ── Touchpoints Tab ───────────────────────────────────────
 function renderTouchpointsTab(client) {
+  const typeColors = {
+    meeting:      { bg: 'var(--primary-light)', color: 'var(--primary)' },
+    phone_call:   { bg: 'var(--green-bg)',      color: 'var(--green-text)' },
+    video_call:   { bg: 'var(--purple-bg)',     color: 'var(--purple-text)' },
+    email:        { bg: 'var(--blue-bg)',       color: 'var(--blue-text)' },
+    gift_sent:    { bg: 'var(--accent-light)',  color: 'var(--accent)' },
+    event:        { bg: '#FCE7F3',              color: '#9D174D' },
+    annual_review:{ bg: '#CFFAFE',              color: '#164E63' }
+  };
+  const sentimentColors = { positive: 'var(--green-text)', neutral: 'var(--text-muted)', negative: 'var(--red)' };
+
   return `
-  <div class="touchpoints-header">
-    <div class="panel-title" style="margin:0">${client.touchpoints.length} Touchpoints on Record</div>
-    <button class="btn btn-primary btn-sm">+ Log Touchpoint</button>
+  <div class="tab-section-header">
+    <div class="tab-section-title">${client.touchpoints.length} Touchpoints on Record</div>
+    <button class="btn-outline-sm">+ Log Touchpoint</button>
   </div>
-  <div class="timeline">
-    ${client.touchpoints.map(tp => {
-      const sentimentColor = { positive: 'var(--green)', neutral: 'var(--text-2)', negative: 'var(--red)' }[tp.sentiment] || 'var(--text-2)';
-      return `
-      <div class="timeline-item">
-        <div class="timeline-icon ${touchpointClass(tp.type)}">${touchpointIcon(tp.type)}</div>
-        <div class="timeline-body">
-          <div class="timeline-header">
-            <div class="timeline-title">${tp.title}</div>
-            <div class="timeline-date">${formatDate(tp.date)}</div>
-          </div>
-          <div class="timeline-notes">${tp.notes}</div>
-          <div class="timeline-meta">
-            <span class="tp-badge ${touchpointClass(tp.type)}">${touchpointLabel(tp.type)}</span>
-            <span style="font-size:11px;color:${sentimentColor};font-weight:600">● ${tp.sentiment}</span>
-            <span style="font-size:11px;color:var(--text-3)">${daysSince(tp.date)} days ago</span>
-          </div>
-        </div>
-      </div>`; }).join('')}
+  <div class="panel-card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:44px"></th>
+          <th>Title</th>
+          <th>Notes</th>
+          <th>Sentiment</th>
+          <th>Date</th>
+          <th style="text-align:right">Days Ago</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${client.touchpoints.map(tp => {
+          const tc = typeColors[tp.type] || { bg: 'var(--primary-light)', color: 'var(--primary)' };
+          const sc = sentimentColors[tp.sentiment] || 'var(--text-muted)';
+          const excerpt = tp.notes.length > 80 ? tp.notes.slice(0, 80) + '…' : tp.notes;
+          return `
+          <tr>
+            <td>
+              <div class="tp-icon-cell" style="background:${tc.bg};color:${tc.color}">${touchpointIcon(tp.type)}</div>
+            </td>
+            <td>
+              <div class="data-table-primary">${tp.title}</div>
+              <div class="data-table-sub">${touchpointLabel(tp.type)}</div>
+            </td>
+            <td class="data-table-note">${excerpt}</td>
+            <td>
+              <span class="sentiment-chip" style="color:${sc}">
+                <span class="sentiment-dot-sm" style="background:${sc}"></span>
+                ${tp.sentiment}
+              </span>
+            </td>
+            <td class="data-table-sub" style="white-space:nowrap">${formatDate(tp.date)}</td>
+            <td class="data-table-num">${daysSince(tp.date)}d</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
   </div>`;
 }
 
@@ -754,85 +785,151 @@ function renderServiceTab(client) {
   const open   = client.serviceRequests.filter(r => r.status !== 'completed');
   const closed = client.serviceRequests.filter(r => r.status === 'completed');
 
-  function reqCard(r) {
+  const priorityColors = {
+    high:   { dot: 'var(--red)',    bg: 'rgba(200,40,40,.08)',  text: 'var(--red)' },
+    medium: { dot: 'var(--accent)', bg: 'rgba(184,100,20,.08)', text: 'var(--accent)' },
+    low:    { dot: 'var(--blue)',   bg: 'var(--blue-bg)',       text: 'var(--blue-text)' }
+  };
+
+  function reqRow(r) {
     const od = daysSince(r.createdDate);
+    const pc = priorityColors[r.priority] || priorityColors.low;
     return `
-    <div class="request-card">
-      <div class="request-priority-bar priority-${r.priority}"></div>
-      <div class="request-body">
-        <div class="request-top">
-          <div class="request-title">${r.title}</div>
-          <span class="status-badge ${statusClass(r.status)}">${statusLabel(r.status)}</span>
-        </div>
-        <div class="request-meta">
-          <span class="request-type">${r.type}</span>
-          <span class="tier-badge" style="background:var(--${r.priority==='high'?'red':r.priority==='medium'?'amber':'blue'}-bg);color:var(--${r.priority==='high'?'red':r.priority==='medium'?'amber':'blue'}-text)">${r.priority.toUpperCase()} PRIORITY</span>
-        </div>
-        <div class="request-notes">${r.notes}</div>
-        <div class="request-footer">
-          <span>Opened ${od} day${od!==1?'s':''} ago</span>
-          <span>·</span>
-          <span>Due ${formatDate(r.dueDate)}</span>
-        </div>
-      </div>
-    </div>`;
+    <tr>
+      <td>
+        <span class="priority-dot-badge" style="background:${pc.bg};color:${pc.text}">${r.priority.toUpperCase()}</span>
+      </td>
+      <td>
+        <div class="data-table-primary">${r.title}</div>
+        <div class="data-table-note" style="margin-top:3px">${r.notes}</div>
+      </td>
+      <td class="data-table-sub">${r.type}</td>
+      <td><span class="status-badge ${statusClass(r.status)}">${statusLabel(r.status)}</span></td>
+      <td class="data-table-sub" style="white-space:nowrap">Opened ${od}d ago</td>
+      <td class="data-table-sub" style="white-space:nowrap">Due ${formatDate(r.dueDate)}</td>
+    </tr>`;
   }
 
+  const allRequests = [...open, ...closed];
+
   return `
-  <div class="service-header">
-    <div class="panel-title" style="margin:0">${open.length} Open · ${closed.length} Completed</div>
-    <button class="btn btn-primary btn-sm">+ New Request</button>
+  <div class="tab-section-header">
+    <div class="tab-section-title">${open.length} Open &nbsp;·&nbsp; ${closed.length} Completed</div>
+    <button class="btn-outline-sm">+ New Request</button>
   </div>
-  <div class="requests-list">
-    ${open.length === 0 && closed.length === 0
-      ? `<div class="empty-state"><div class="empty-title">No service requests</div><div class="empty-sub">All clear — no open items</div></div>`
-      : [...open, ...closed].map(reqCard).join('')}
-  </div>`;
+  ${allRequests.length === 0
+    ? `<div class="empty-state"><div class="empty-title">No service requests</div><div class="empty-sub">All clear — no open items</div></div>`
+    : `<div class="panel-card" style="padding:0;overflow:hidden">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:90px">Priority</th>
+              <th>Request</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Opened</th>
+              <th>Due</th>
+            </tr>
+          </thead>
+          <tbody>${allRequests.map(reqRow).join('')}</tbody>
+        </table>
+      </div>`}`;
 }
 
 
 // ── Holdings Tab ──────────────────────────────────────────
+const ASSET_COLORS = {
+  'US Equity':      '#0C2340',
+  'Fixed Income':   '#B8923C',
+  'Real Estate':    '#6B8FAF',
+  'Private Equity': '#3D2B1F',
+  'Hedge Fund':     '#5A6B7A',
+  'Cash':           '#C8BFA8',
+  'Alternatives':   '#8B7355',
+  'Real Assets':    '#5A7A5A'
+};
+function assetColor(type) { return ASSET_COLORS[type] || '#9CA3AF'; }
+
+function renderDonut(slices) {
+  const r = 40, cx = 60, cy = 60;
+  const circ = 2 * Math.PI * r;
+  let cumPct = 0;
+  const paths = slices.map(s => {
+    const dash   = (s.pct / 100) * circ;
+    const gap    = circ - dash;
+    const rotate = -90 + (cumPct / 100) * 360;
+    cumPct += s.pct;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+      stroke="${s.color}" stroke-width="20"
+      stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
+      transform="rotate(${rotate.toFixed(2)}, ${cx}, ${cy})"/>`;
+  });
+  return `<svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">${paths.join('')}</svg>`;
+}
+
 function renderHoldingsTab(client) {
   const totals = {};
   client.holdings.forEach(h => { totals[h.type] = (totals[h.type] || 0) + h.value; });
   const totalVal = client.holdings.reduce((s, h) => s + h.value, 0);
 
+  const slices = Object.entries(totals).map(([type, val]) => ({
+    type, val, pct: (val / totalVal) * 100, color: assetColor(type)
+  })).sort((a, b) => b.pct - a.pct);
+
   return `
-  <div class="holdings-summary">
-    ${Object.entries(totals).map(([type, val]) => `
-      <div class="holding-summary-card">
-        <div class="holding-type-label">${type}</div>
-        <div class="holding-type-value">${formatCurrency(val)}</div>
-        <div class="holding-type-pct">${((val/totalVal)*100).toFixed(1)}% of portfolio</div>
-      </div>`).join('')}
+  <div class="tab-section-header">
+    <div class="tab-section-title">${client.holdings.length} Positions &nbsp;·&nbsp; ${formatCurrency(totalVal)} Total</div>
   </div>
-  <div class="holdings-table-wrap">
-    <table>
-      <thead class="table-header">
+
+  <div class="holdings-overview">
+    <div class="donut-wrap">
+      ${renderDonut(slices)}
+      <div class="donut-center">
+        <div class="donut-center-val">${formatCurrency(totalVal)}</div>
+        <div class="donut-center-label">Portfolio</div>
+      </div>
+    </div>
+    <div class="donut-legend">
+      ${slices.map(s => `
+        <div class="donut-legend-row">
+          <span class="donut-legend-dot" style="background:${s.color}"></span>
+          <span class="donut-legend-label">${s.type}</span>
+          <span class="donut-legend-pct">${s.pct.toFixed(1)}%</span>
+          <span class="donut-legend-val">${formatCurrency(s.val)}</span>
+        </div>`).join('')}
+    </div>
+  </div>
+
+  <div class="panel-card" style="padding:0;overflow:hidden;margin-top:16px">
+    <table class="data-table">
+      <thead>
         <tr>
           <th>Asset</th>
           <th>Type</th>
-          <th>Value</th>
+          <th style="text-align:right">Value</th>
           <th>Allocation</th>
-          <th>Gain / Loss</th>
+          <th style="text-align:right">Gain / Loss</th>
         </tr>
       </thead>
       <tbody>
         ${client.holdings.map(h => `
           <tr>
             <td>
-              <div class="asset-name">${h.name}</div>
-              ${h.ticker ? `<div class="asset-ticker">${h.ticker}</div>` : ''}
+              <div class="data-table-primary">${h.name}</div>
+              ${h.ticker ? `<div class="data-table-sub">${h.ticker}</div>` : ''}
             </td>
-            <td><span class="asset-type-badge ${assetTypeClass(h.type)}">${h.type}</span></td>
-            <td><strong>${formatCurrency(h.value)}</strong></td>
+            <td>
+              <span class="asset-type-dot" style="background:${assetColor(h.type)}"></span>
+              <span class="data-table-sub">${h.type}</span>
+            </td>
+            <td class="data-table-num">${formatCurrency(h.value)}</td>
             <td>
               <div class="alloc-bar-wrap">
-                <div class="alloc-bar"><div class="alloc-fill" style="width:${Math.min(h.allocation, 100)}%"></div></div>
-                <span>${h.allocation.toFixed(1)}%</span>
+                <div class="alloc-bar"><div class="alloc-fill" style="width:${Math.min(h.allocation, 100)}%;background:${assetColor(h.type)}"></div></div>
+                <span class="data-table-sub">${h.allocation.toFixed(1)}%</span>
               </div>
             </td>
-            <td class="${h.gainLossPct >= 0 ? 'gain' : 'loss'}">${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%</td>
+            <td class="data-table-num ${h.gainLossPct >= 0 ? 'gain' : 'loss'}">${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%</td>
           </tr>`).join('')}
       </tbody>
     </table>
@@ -841,29 +938,35 @@ function renderHoldingsTab(client) {
 
 // ── Transactions Tab ──────────────────────────────────────
 function renderTransactionsTab(client) {
+  const txs = client.recentTransactions;
+  const netFlow = txs.reduce((s, t) => s + (t.amount || 0), 0);
+
   return `
-  <div class="transactions-wrap">
-    <table>
-      <thead class="table-header">
+  <div class="tab-section-header">
+    <div class="tab-section-title">${txs.length} Recent Transactions &nbsp;·&nbsp; Net <span class="${netFlow >= 0 ? 'gain' : 'loss'}">${formatAmount(netFlow)}</span></div>
+  </div>
+  <div class="panel-card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead>
         <tr>
           <th>Date</th>
           <th>Type</th>
           <th>Asset / Description</th>
           <th>Account</th>
-          <th>Amount</th>
+          <th style="text-align:right">Amount</th>
         </tr>
       </thead>
       <tbody>
-        ${client.recentTransactions.map(tx => `
+        ${txs.map(tx => `
           <tr>
-            <td style="white-space:nowrap;color:var(--text-2)">${formatDate(tx.date)}</td>
-            <td><span class="tx-type ${txTypeClass(tx.type)}">${tx.type}</span></td>
+            <td class="data-table-sub" style="white-space:nowrap">${formatDate(tx.date)}</td>
+            <td><span class="tx-badge ${txTypeClass(tx.type)}">${tx.type}</span></td>
             <td>
-              <div style="font-weight:600">${tx.asset || '—'}</div>
-              <div style="font-size:12px;color:var(--text-2)">${tx.description}</div>
+              <div class="data-table-primary">${tx.asset || '—'}</div>
+              <div class="data-table-note">${tx.description}</div>
             </td>
-            <td style="font-size:12px;color:var(--text-2)">${tx.account}</td>
-            <td style="font-weight:600;text-align:right" class="${tx.amount > 0 ? 'gain' : tx.amount < 0 ? 'loss' : 'neutral'}">${formatAmount(tx.amount)}</td>
+            <td class="data-table-sub">${tx.account}</td>
+            <td class="data-table-num ${tx.amount > 0 ? 'gain' : tx.amount < 0 ? 'loss' : ''}">${formatAmount(tx.amount)}</td>
           </tr>`).join('')}
       </tbody>
     </table>
