@@ -217,11 +217,11 @@ function renderSidebar() {
     return `
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark">
-          <div class="brand-logo">GC</div>
+        <div class="brand-mark">GC</div>
+        <div class="brand-text">
           <div class="brand-name">Gold Capital</div>
+          <div class="brand-sub">Advisor Workstation</div>
         </div>
-        <div class="brand-sub">Advisor Workstation</div>
       </div>
       <div class="sidebar-advisor">
         <div class="advisor-avatar">${advisor.initials}</div>
@@ -275,11 +275,11 @@ function renderSidebar() {
   return `
   <aside class="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-mark">
-        <div class="brand-logo">GC</div>
+      <div class="brand-mark">GC</div>
+      <div class="brand-text">
         <div class="brand-name">Gold Capital</div>
+        <div class="brand-sub">Advisor Workstation</div>
       </div>
-      <div class="brand-sub">Advisor Workstation</div>
     </div>
     <div class="sidebar-advisor">
       <div class="advisor-avatar">${advisor.initials}</div>
