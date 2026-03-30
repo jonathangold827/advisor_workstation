@@ -216,7 +216,7 @@ function renderSidebar() {
   const totalAUM = clients.reduce((s, c) => s + c.aum, 0);
   const openTasks = clients.reduce((s, c) => s + c.openTasks, 0);
 
-  if (state.view === 'advisor') {
+  if (state.view !== 'client') {
     return `
     <aside class="sidebar">
       <div class="sidebar-brand">
