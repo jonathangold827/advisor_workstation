@@ -173,6 +173,9 @@ function parseRoute() {
     state.view = 'client';
     state.clientId = parseInt(parts[1]);
     state.activeTab = 'overview';
+  } else if (['calendar', 'tasks', 'reports'].includes(parts[0])) {
+    state.view = parts[0];
+    state.clientId = null;
   } else {
     state.view = 'advisor';
     state.clientId = null;
@@ -232,19 +235,13 @@ function renderSidebar() {
       </div>
       <nav class="sidebar-nav">
         <div class="nav-label">Workspace</div>
-        <button class="nav-item active" data-nav="advisor">
-          Book of Business
-        </button>
-        <button class="nav-item" disabled style="opacity:0.35;cursor:default">
-          Calendar
-        </button>
-        <button class="nav-item" disabled style="opacity:0.35;cursor:default">
+        <button class="nav-item ${state.view==='advisor'?'active':''}" data-nav="advisor">Book of Business</button>
+        <button class="nav-item ${state.view==='calendar'?'active':''}" data-nav="calendar">Calendar</button>
+        <button class="nav-item ${state.view==='tasks'?'active':''}" data-nav="tasks">
           Tasks
           ${openTasks > 0 ? `<span class="nav-badge">${openTasks}</span>` : ''}
         </button>
-        <button class="nav-item" disabled style="opacity:0.35;cursor:default">
-          Reports
-        </button>
+        <button class="nav-item ${state.view==='reports'?'active':''}" data-nav="reports">Reports</button>
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-stat-row">
@@ -309,6 +306,324 @@ function renderSidebar() {
         </div>` : ''}
     </div>
   </aside>`;
+}
+
+// ─── CALENDAR VIEW ────────────────────────────────────────
+function renderCalendarView() {
+  const base = new Date(TODAY + 'T00:00:00');
+  const year = base.getFullYear(), month = base.getMonth();
+  const monthName = base.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const firstDay  = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  // Collect all events for this month
+  const events = {};
+  clients.forEach(c => {
+    c.upcomingMilestones.forEach(m => {
+      const d = new Date(m.date + 'T00:00:00');
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const key = d.getDate();
+        if (!events[key]) events[key] = [];
+        events[key].push({ type: 'milestone', label: m.description, client: c.displayName.split(' ')[0] });
+      }
+    });
+    c.touchpoints.forEach(tp => {
+      const d = new Date(tp.date + 'T00:00:00');
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const key = d.getDate();
+        if (!events[key]) events[key] = [];
+        events[key].push({ type: 'touchpoint', label: tp.title, client: c.displayName.split(' ')[0] });
+      }
+    });
+    c.serviceRequests.forEach(sr => {
+      if (sr.status === 'completed') return;
+      const d = new Date(sr.dueDate + 'T00:00:00');
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const key = d.getDate();
+        if (!events[key]) events[key] = [];
+        events[key].push({ type: 'task', label: sr.title, client: c.displayName.split(' ')[0] });
+      }
+    });
+  });
+
+  const today = base.getDate();
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  let cells = '';
+  for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === today;
+    const dayEvents = events[d] || [];
+    const shown = dayEvents.slice(0, 2);
+    const overflow = dayEvents.length - 2;
+    cells += `
+    <div class="cal-cell${isToday ? ' cal-today' : ''}">
+      <div class="cal-day-num${isToday ? ' cal-today-num' : ''}">${d}</div>
+      ${shown.map(ev => `<div class="cal-event cal-event-${ev.type}" title="${ev.client}: ${ev.label}">${ev.client}: ${ev.label}</div>`).join('')}
+      ${overflow > 0 ? `<div class="cal-event-more">+${overflow} more</div>` : ''}
+    </div>`;
+  }
+
+  // Upcoming list — next 14 days of milestones + due tasks
+  const upcoming = [];
+  clients.forEach(c => {
+    c.upcomingMilestones.forEach(m => {
+      const d = daysUntil(m.date);
+      if (d >= 0 && d <= 14) upcoming.push({ d, date: m.date, label: m.description, client: c.displayName, type: 'milestone' });
+    });
+    c.serviceRequests.filter(r => r.status !== 'completed').forEach(r => {
+      const d = daysUntil(r.dueDate);
+      if (d >= 0 && d <= 14) upcoming.push({ d, date: r.dueDate, label: r.title, client: c.displayName, type: 'task' });
+    });
+  });
+  upcoming.sort((a, b) => a.d - b.d);
+
+  return `
+  <div class="main-header">
+    <div class="header-title">Calendar</div>
+    <div class="header-spacer"></div>
+    <div class="header-avatar">${advisor.initials}</div>
+  </div>
+  <div class="main-content">
+    <div class="calendar-layout">
+      <div class="cal-main">
+        <div class="cal-month-header">${monthName}</div>
+        <div class="cal-grid-head">
+          ${days.map(d => `<div class="cal-grid-label">${d}</div>`).join('')}
+        </div>
+        <div class="cal-grid">${cells}</div>
+        <div class="cal-legend">
+          <span class="cal-legend-dot cal-event-milestone"></span>Milestone
+          <span class="cal-legend-dot cal-event-touchpoint" style="margin-left:12px"></span>Touchpoint
+          <span class="cal-legend-dot cal-event-task" style="margin-left:12px"></span>Task Due
+        </div>
+      </div>
+      <div class="cal-sidebar">
+        <div class="cal-sidebar-title">Next 14 Days</div>
+        ${upcoming.length === 0
+          ? `<div class="empty-sub" style="padding:12px 0">Nothing scheduled</div>`
+          : upcoming.map(ev => `
+            <div class="cal-upcoming-row">
+              <div class="cal-upcoming-date">${ev.d === 0 ? 'Today' : ev.d + 'd'}</div>
+              <div class="cal-upcoming-body">
+                <div class="data-table-primary" style="font-size:12px">${ev.label}</div>
+                <div class="data-table-sub">${ev.client}</div>
+              </div>
+              <span class="cal-event-dot cal-event-${ev.type}"></span>
+            </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── TASKS VIEW ───────────────────────────────────────────
+function renderTasksView() {
+  const allTasks = [];
+  clients.forEach(c => {
+    c.serviceRequests.filter(r => r.status !== 'completed').forEach(r => {
+      allTasks.push({ ...r, clientName: c.displayName, clientId: c.id });
+    });
+  });
+  allTasks.sort((a, b) => {
+    const pOrder = { high: 0, medium: 1, low: 2 };
+    if (pOrder[a.priority] !== pOrder[b.priority]) return pOrder[a.priority] - pOrder[b.priority];
+    return new Date(a.dueDate) - new Date(b.dueDate);
+  });
+
+  const priorityColors = {
+    high:   { bg: 'rgba(200,40,40,.08)',  color: 'var(--red)' },
+    medium: { bg: 'rgba(184,100,20,.08)', color: 'var(--accent)' },
+    low:    { bg: 'var(--blue-bg)',       color: 'var(--blue-text)' }
+  };
+
+  return `
+  <div class="main-header">
+    <div class="header-title">Tasks</div>
+    <div class="header-spacer"></div>
+    <div class="header-avatar">${advisor.initials}</div>
+  </div>
+  <div class="main-content">
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Open Tasks</div>
+        <div class="stat-value">${allTasks.length}</div>
+        <div class="stat-sub">across ${clients.filter(c => c.serviceRequests.some(r=>r.status!=='completed')).length} clients</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">High Priority</div>
+        <div class="stat-value">${allTasks.filter(t=>t.priority==='high').length}</div>
+        <div class="stat-sub">require immediate attention</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Due This Week</div>
+        <div class="stat-value">${allTasks.filter(t=>daysUntil(t.dueDate)<=7&&daysUntil(t.dueDate)>=0).length}</div>
+        <div class="stat-sub">due within 7 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Awaiting Client</div>
+        <div class="stat-value">${allTasks.filter(t=>t.status==='awaiting_client').length}</div>
+        <div class="stat-sub">pending client response</div>
+      </div>
+    </div>
+
+    ${allTasks.length === 0
+      ? `<div class="empty-state"><div class="empty-title">All clear</div><div class="empty-sub">No open tasks</div></div>`
+      : `<div class="panel-card" style="padding:0;overflow:hidden">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:90px">Priority</th>
+                <th>Task</th>
+                <th>Client</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${allTasks.map(t => {
+                const pc = priorityColors[t.priority] || priorityColors.low;
+                const due = daysUntil(t.dueDate);
+                const dueCls = due <= 3 ? 'loss' : due <= 7 ? '' : 'data-table-sub';
+                return `
+                <tr>
+                  <td><span class="priority-dot-badge" style="background:${pc.bg};color:${pc.color}">${t.priority.toUpperCase()}</span></td>
+                  <td>
+                    <div class="data-table-primary">${t.title}</div>
+                    <div class="data-table-note">${t.notes}</div>
+                  </td>
+                  <td>
+                    <span class="tasks-client-link" data-client-id="${t.clientId}">${t.clientName}</span>
+                  </td>
+                  <td class="data-table-sub">${t.type}</td>
+                  <td><span class="status-badge ${statusClass(t.status)}">${statusLabel(t.status)}</span></td>
+                  <td class="${dueCls}" style="white-space:nowrap;font-size:13px;font-weight:600">${due === 0 ? 'Today' : due < 0 ? 'Overdue' : formatDate(t.dueDate)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`}
+  </div>`;
+}
+
+// ─── REPORTS VIEW ─────────────────────────────────────────
+function renderReportsView() {
+  const totalAUM   = clients.reduce((s, c) => s + c.aum, 0);
+  const totalRev   = clients.reduce((s, c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0);
+  const totalLTV   = clients.reduce((s, c) => s + c.ltvMetrics.projectedLTV, 0);
+  const totalRefs  = clients.reduce((s, c) => s + c.ltvMetrics.referralsGiven, 0);
+  const avgHealth  = (clients.reduce((s, c) => s + c.healthScore, 0) / clients.length).toFixed(1);
+
+  const byTier = ['platinum', 'gold', 'silver'].map(tier => {
+    const grp = clients.filter(c => c.tier === tier);
+    return {
+      tier,
+      count: grp.length,
+      aum: grp.reduce((s, c) => s + c.aum, 0),
+      rev: grp.reduce((s, c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0),
+      avgHealth: grp.length ? (grp.reduce((s, c) => s + c.healthScore, 0) / grp.length).toFixed(1) : '—'
+    };
+  });
+
+  const byHealth = [
+    { label: 'Thriving', cls: 'health-thriving', count: clients.filter(c => c.healthLabel === 'Thriving').length },
+    { label: 'Nurture',  cls: 'health-nurture',  count: clients.filter(c => c.healthLabel === 'Nurture').length },
+    { label: 'At Risk',  cls: 'health-at-risk',  count: clients.filter(c => c.healthLabel === 'At Risk').length }
+  ];
+
+  const tpLast30 = clients.reduce((s, c) =>
+    s + c.touchpoints.filter(tp => daysSince(tp.date) <= 30).length, 0);
+  const avgContactDays = Math.round(
+    clients.reduce((s, c) => s + daysSince(c.lastTouchpoint.date), 0) / clients.length);
+  const overdueCount = clients.filter(c => daysSince(c.lastTouchpoint.date) > 60).length;
+
+  return `
+  <div class="main-header">
+    <div class="header-title">Reports</div>
+    <div class="header-spacer"></div>
+    <div class="header-avatar">${advisor.initials}</div>
+  </div>
+  <div class="main-content">
+
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Total AUM</div>
+        <div class="stat-value">${formatCurrency(totalAUM)}</div>
+        <div class="stat-sub">${clients.length} client relationships</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Annual Revenue</div>
+        <div class="stat-value">${formatCurrency(totalRev)}</div>
+        <div class="stat-sub">${((totalRev/totalAUM)*100).toFixed(2)}% blended fee</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Projected LTV</div>
+        <div class="stat-value">${formatCurrency(totalLTV)}</div>
+        <div class="stat-sub">${totalRefs} referrals given</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Health Score</div>
+        <div class="stat-value">${avgHealth}<span style="font-size:14px;font-weight:400;color:var(--text-muted)">/10</span></div>
+        <div class="stat-sub">LTV-weighted</div>
+      </div>
+    </div>
+
+    <div class="reports-grid">
+      <div class="panel-card">
+        <div class="panel-title">AUM by Tier</div>
+        <table class="data-table">
+          <thead><tr><th>Tier</th><th>Clients</th><th style="text-align:right">AUM</th><th style="text-align:right">Revenue</th><th style="text-align:right">Avg Health</th></tr></thead>
+          <tbody>
+            ${byTier.map(r => `
+            <tr>
+              <td><span class="tier-badge ${tierClass(r.tier)}">${tierLabel(r.tier)}</span></td>
+              <td class="data-table-sub">${r.count}</td>
+              <td class="data-table-num">${formatCurrency(r.aum)}</td>
+              <td class="data-table-num">${formatCurrency(r.rev)}</td>
+              <td class="data-table-num">${r.avgHealth}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Health Distribution</div>
+        ${byHealth.map(h => `
+        <div class="report-health-row">
+          <span class="health-label-badge ${h.cls}">${h.label}</span>
+          <div class="report-bar-track">
+            <div class="report-bar-fill ${h.cls}" style="width:${(h.count/clients.length*100).toFixed(0)}%"></div>
+          </div>
+          <span class="data-table-num" style="min-width:20px">${h.count}</span>
+        </div>`).join('')}
+
+        <div class="panel-title" style="margin-top:20px">Engagement Summary</div>
+        <div class="report-stat-row"><span class="data-table-sub">Touchpoints (last 30 days)</span><span class="data-table-primary">${tpLast30}</span></div>
+        <div class="report-stat-row"><span class="data-table-sub">Avg days since last contact</span><span class="data-table-primary">${avgContactDays}d</span></div>
+        <div class="report-stat-row"><span class="data-table-sub">Clients overdue for contact</span><span class="data-table-primary ${overdueCount>0?'loss':''}">${overdueCount}</span></div>
+      </div>
+    </div>
+
+    <div class="panel-card" style="margin-top:16px;padding:0;overflow:hidden">
+      <div style="padding:16px 20px 8px"><div class="panel-title" style="margin:0">Client Summary</div></div>
+      <table class="data-table">
+        <thead><tr><th>Client</th><th>Tier</th><th style="text-align:right">AUM</th><th style="text-align:right">Revenue</th><th style="text-align:right">LTV</th><th>Health</th><th style="text-align:right">Last Contact</th></tr></thead>
+        <tbody>
+          ${[...clients].sort((a,b)=>b.aum-a.aum).map(c => `
+          <tr>
+            <td><div class="data-table-primary">${c.displayName}</div></td>
+            <td><span class="tier-badge ${tierClass(c.tier)}">${tierLabel(c.tier)}</span></td>
+            <td class="data-table-num">${formatCurrency(c.aum)}</td>
+            <td class="data-table-num">${formatCurrency(c.ltvMetrics.estimatedAnnualRevenue)}</td>
+            <td class="data-table-num">${formatCurrency(c.ltvMetrics.projectedLTV)}</td>
+            <td><span class="health-score-inline ${healthColor(c.healthScore)}">${c.healthScore} <span style="font-weight:400">${c.healthLabel}</span></span></td>
+            <td class="data-table-num data-table-sub">${daysSince(c.lastTouchpoint.date)}d ago</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+  </div>`;
 }
 
 // ─── ATTENTION STRIP ──────────────────────────────────────
@@ -976,7 +1291,14 @@ function renderTransactionsTab(client) {
 // ─── MAIN RENDER ──────────────────────────────────────────
 function renderApp() {
   const sidebar = renderSidebar();
-  const main    = state.view === 'advisor' ? renderAdvisorView() : renderClientView();
+  const viewMap = {
+    advisor:  renderAdvisorView,
+    client:   renderClientView,
+    calendar: renderCalendarView,
+    tasks:    renderTasksView,
+    reports:  renderReportsView
+  };
+  const main = (viewMap[state.view] || renderAdvisorView)();
 
   document.getElementById('app').innerHTML = `
     <div class="app-shell fade-in">
@@ -992,6 +1314,16 @@ function attachEventListeners() {
   const app = document.getElementById('app');
 
   app.addEventListener('click', e => {
+    // Top-level nav
+    const navBtn = e.target.closest('[data-nav]');
+    if (navBtn && !e.target.closest('[data-tab]')) { navigate(navBtn.getAttribute('data-nav') === 'advisor' ? '' : navBtn.getAttribute('data-nav')); return; }
+
+    // Tasks view — click client name to open client
+    if (e.target.closest('.tasks-client-link')) {
+      const id = e.target.closest('.tasks-client-link').getAttribute('data-client-id');
+      if (id) { navigate('client/' + id); return; }
+    }
+
     // Back to advisor view
     if (e.target.closest('[data-back]')) { navigate(''); return; }
 

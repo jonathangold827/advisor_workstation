@@ -1281,7 +1281,140 @@ a { text-decoration: none; color: inherit; }
 .sentiment-dot.neutral  { background: var(--amber); }
 .sentiment-dot.negative { background: var(--red);   }
 
-/* 20. ANIMATIONS */
+/* 20. CALENDAR VIEW */
+.calendar-layout {
+  display: grid; grid-template-columns: 1fr 240px; gap: 16px;
+  align-items: start;
+}
+.cal-main {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.cal-month-header {
+  padding: 16px 20px 12px;
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 700; color: var(--primary);
+  border-bottom: 1px solid var(--border-light);
+}
+.cal-grid-head {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light);
+}
+.cal-grid-label {
+  padding: 8px 0; text-align: center;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+}
+.cal-cell {
+  min-height: 80px; padding: 8px 6px;
+  border-right: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+  vertical-align: top;
+}
+.cal-cell:nth-child(7n) { border-right: none; }
+.cal-empty { background: var(--bg); }
+.cal-today { background: rgba(12,35,64,.03); }
+.cal-day-num {
+  font-size: 12px; font-weight: 500; color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.cal-today-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  font-size: 11px; font-weight: 700;
+}
+.cal-event {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 5px; border-radius: 3px;
+  margin-bottom: 2px; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: default;
+}
+.cal-event-milestone  { background: var(--accent-light);  color: var(--accent); }
+.cal-event-touchpoint { background: var(--primary-light); color: var(--primary); }
+.cal-event-task       { background: rgba(200,40,40,.1);   color: var(--red); }
+.cal-event-more { font-size: 10px; color: var(--text-muted); padding: 1px 5px; }
+.cal-legend {
+  padding: 10px 16px; display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text-muted);
+  border-top: 1px solid var(--border-light);
+}
+.cal-legend-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+}
+.cal-sidebar {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 16px;
+}
+.cal-sidebar-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-muted); margin-bottom: 12px;
+}
+.cal-upcoming-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-light);
+}
+.cal-upcoming-row:last-child { border-bottom: none; }
+.cal-upcoming-date {
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  min-width: 32px; padding-top: 1px;
+}
+.cal-upcoming-body { flex: 1; }
+.cal-event-dot {
+  width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; margin-top: 4px;
+}
+
+/* 21. TASKS VIEW */
+.tasks-client-link {
+  font-size: 13px; color: var(--primary); font-weight: 600;
+  cursor: pointer; text-decoration: none;
+}
+.tasks-client-link:hover { text-decoration: underline; }
+
+/* 22. REPORTS VIEW */
+.reports-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-top: 16px;
+}
+.report-health-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+}
+.health-label-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; min-width: 54px;
+  padding: 2px 7px; border-radius: var(--r-sm);
+}
+.health-label-badge.health-thriving { background: var(--green-bg);          color: var(--green-text); }
+.health-label-badge.health-nurture  { background: rgba(184,100,20,.1);       color: var(--accent); }
+.health-label-badge.health-at-risk  { background: rgba(200,40,40,.09);       color: var(--red); }
+.report-bar-track {
+  flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+}
+.report-bar-fill {
+  height: 100%; border-radius: 3px;
+}
+.report-bar-fill.health-thriving { background: var(--green); }
+.report-bar-fill.health-nurture  { background: var(--accent); }
+.report-bar-fill.health-at-risk  { background: var(--red); }
+.report-stat-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0; border-bottom: 1px solid var(--border-light);
+}
+.report-stat-row:last-child { border-bottom: none; }
+.health-score-inline {
+  font-size: 12px; font-weight: 700;
+}
+.health-score-inline.green { color: var(--green-text); }
+.health-score-inline.amber { color: var(--accent); }
+.health-score-inline.red   { color: var(--red); }
+
+/* 23. ANIMATIONS */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
