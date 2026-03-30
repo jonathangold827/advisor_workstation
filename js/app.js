@@ -380,6 +380,7 @@ function renderCalendarView() {
 
   return `
   <div class="main-header">
+    ${menuBtn}
     <div class="header-title">Calendar</div>
     <div class="header-spacer"></div>
     <div class="header-avatar">${advisor.initials}</div>
@@ -438,6 +439,7 @@ function renderTasksView() {
 
   return `
   <div class="main-header">
+    ${menuBtn}
     <div class="header-title">Tasks</div>
     <div class="header-spacer"></div>
     <div class="header-avatar">${advisor.initials}</div>
@@ -539,6 +541,7 @@ function renderReportsView() {
 
   return `
   <div class="main-header">
+    ${menuBtn}
     <div class="header-title">Reports</div>
     <div class="header-spacer"></div>
     <div class="header-avatar">${advisor.initials}</div>
@@ -680,6 +683,7 @@ function renderAdvisorView() {
 
   return `
   <div class="main-header">
+    ${menuBtn}
     <div class="header-title">Book of Business</div>
     <div class="header-search">
       <span class="header-search-icon">◎</span>
@@ -821,6 +825,7 @@ function renderClientView() {
 
   return `
   <div class="main-header">
+    ${menuBtn}
     <div class="header-breadcrumb">
       <span class="breadcrumb-link" data-back="true">Book of Business</span>
       <span class="breadcrumb-sep">›</span>
@@ -1288,6 +1293,9 @@ function renderTransactionsTab(client) {
   </div>`;
 }
 
+// ─── MOBILE HELPERS ───────────────────────────────────────
+const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
+
 // ─── MAIN RENDER ──────────────────────────────────────────
 function renderApp() {
   const sidebar = renderSidebar();
@@ -1301,6 +1309,7 @@ function renderApp() {
   const main = (viewMap[state.view] || renderAdvisorView)();
 
   document.getElementById('app').innerHTML = `
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <div class="app-shell fade-in">
       ${sidebar}
       <div class="main-area">${main}</div>
@@ -1309,8 +1318,29 @@ function renderApp() {
   attachEventListeners();
 }
 
+// ─── SIDEBAR TOGGLE (MOBILE) ──────────────────────────────
+function setupSidebarToggle() {
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const sidebar  = document.querySelector('.sidebar');
+  if (!backdrop || !sidebar) return;
+
+  function openSidebar()  { sidebar.classList.add('open');  backdrop.classList.add('open'); }
+  function closeSidebar() { sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
+
+  document.querySelectorAll('[data-sidebar-toggle]').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); sidebar.classList.contains('open') ? closeSidebar() : openSidebar(); });
+  });
+  backdrop.addEventListener('click', closeSidebar);
+
+  // Close sidebar on nav item click (mobile)
+  sidebar.querySelectorAll('.nav-item, .nav-back, [data-tab]').forEach(el => {
+    el.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
+  });
+}
+
 // ─── EVENT LISTENERS ──────────────────────────────────────
 function attachEventListeners() {
+  setupSidebarToggle();
   const app = document.getElementById('app');
 
   app.addEventListener('click', e => {
