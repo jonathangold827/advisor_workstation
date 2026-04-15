@@ -1423,7 +1423,186 @@ a { text-decoration: none; color: inherit; }
 .fade-in { animation: fadeIn .25s ease; }
 
 /* ============================================================
-   24. CHATBOT
+   24. HOLDINGS DRILLDOWN
+   ============================================================ */
+
+/* Controls row */
+.holdings-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.toggle-group {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.toggle-btn {
+  padding: 5px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.toggle-btn:last-child { border-right: none; }
+.toggle-btn.active { background: var(--primary); color: #fff; }
+.toggle-btn:hover:not(.active) { background: var(--primary-light); color: var(--primary); }
+
+/* Breadcrumb */
+.holdings-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+}
+.breadcrumb-back {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
+}
+.breadcrumb-back:hover { background: var(--primary-light); }
+.breadcrumb-sep { color: var(--text-muted); font-size: 14px; }
+.breadcrumb-current { font-weight: 700; color: var(--text-primary); }
+
+/* Drillable legend rows */
+.holdings-legend-row.drillable {
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  transition: background .15s;
+}
+.holdings-legend-row.drillable:hover { background: var(--primary-light); }
+.drill-chevron {
+  margin-left: auto;
+  color: var(--primary);
+  font-size: 16px;
+  line-height: 1;
+  opacity: .6;
+}
+.holdings-legend-row.drillable:hover .drill-chevron { opacity: 1; }
+.drill-hint {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 8px;
+  padding-left: 2px;
+}
+
+/* KPI Panel */
+.kpi-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+}
+.kpi-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+/* KPI bar rows */
+.kpi-bars { display: flex; flex-direction: column; gap: 7px; }
+.kpi-bar-row { display: flex; align-items: center; gap: 8px; }
+.kpi-bar-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  width: 130px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kpi-bar-track {
+  flex: 1;
+  height: 5px;
+  background: var(--border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.kpi-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .5s ease;
+}
+.kpi-bar-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* KPI metric key-value rows */
+.kpi-metrics { margin-top: 12px; display: flex; flex-direction: column; gap: 7px; }
+.kpi-metric { display: flex; justify-content: space-between; align-items: baseline; }
+.kpi-metric-label { font-size: 11px; color: var(--text-muted); }
+.kpi-metric-val { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.kpi-metric-val.gain { color: var(--green-text); }
+.kpi-alert {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: var(--red-bg);
+  color: var(--red-text);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+  border-left: 3px solid var(--red);
+  line-height: 1.4;
+}
+
+/* L1 asset class badge */
+.l1-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.l1-equity         { background: rgba(12,35,64,.08);    color: var(--primary); }
+.l1-fixed-income   { background: var(--accent-light);   color: var(--accent); }
+.l1-alternatives   { background: var(--blue-bg);        color: var(--blue-text); }
+.l1-cash           { background: rgba(200,191,168,.35); color: var(--text-secondary); }
+
+/* Mobile */
+@media (max-width: 768px) {
+  .kpi-panel { grid-template-columns: 1fr; }
+  .holdings-controls { gap: 8px; }
+  .kpi-bar-label { width: 100px; }
+}
+
+/* ============================================================
+   25. CHATBOT
    ============================================================ */
 
 /* FAB */

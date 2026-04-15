@@ -12,6 +12,263 @@ const state = {
   sort: 'health'
 };
 
+// Holdings drilldown state (persists within a client session)
+let holdingsDrill = null;    // null | 'Equity' | 'Fixed Income' | 'Alternatives' | 'Cash'
+let holdingsLevel = 'class'; // 'class' | 'strategy'
+let holdingsView  = 'product'; // 'product' | 'exposure'
+
+// ─── HOLDINGS CLASSIFICATION DATA ─────────────────────────
+
+const L1_COLORS = {
+  'Equity':       '#0C2340',
+  'Fixed Income': '#B8923C',
+  'Alternatives': '#6B8FAF',
+  'Cash':         '#C8BFA8'
+};
+
+const L2_COLORS = {
+  // Equity
+  'US Large Cap Growth':            '#0C2340',
+  'US Large Cap Value':             '#1E4A78',
+  'US Large Cap Core':              '#2B6CB0',
+  'US Broad Market':                '#3A7DBD',
+  'US Dividend / Income':           '#4A90C4',
+  'Concentrated / Single Stock':    '#7B1C1C',
+  'International Developed Equity': '#6B8FAF',
+  'Emerging Market Equity':         '#4A7A9B',
+  'Global Equity':                  '#5A8FAF',
+  // Fixed Income
+  'Core / Aggregate Bond':          '#B8923C',
+  'Investment Grade Credit':        '#C9A455',
+  'Government / Agency':            '#D4B870',
+  'Municipal / Tax-Exempt':         '#A07828',
+  'Short Duration':                 '#DACC8A',
+  'Inflation-Linked':               '#C4A050',
+  'Global Fixed Income':            '#9A7830',
+  // Alternatives
+  'Private Equity Buyout':          '#3D2B1F',
+  'Core Real Estate':               '#7A6A5A',
+  'Listed Real Estate':             '#8CAFC4',
+  'Macro / Hedge Fund':             '#5A6B7A',
+  'Co-Investment / Family LLC':     '#4A5570',
+  'Real Assets / Commodities':      '#8B7355',
+  // Cash
+  'Money Market':                   '#B0A898',
+  'Cash & Equivalents':             '#C0B8A8',
+  'Short-Term Government':          '#A8A090',
+  'CDs / Bank Deposits':            '#B8B0A0',
+};
+
+// Per-holding metadata: L1 class, L2 strategy, and exposure label
+const HOLDING_META = {
+  // ── Client 1 — Harrington
+  '1:Apple Inc.':                  { assetClass:'Equity',       strategy:'US Large Cap Growth',        exposure:'US Technology (Mega Cap)' },
+  '1:Microsoft Corp.':             { assetClass:'Equity',       strategy:'US Large Cap Growth',        exposure:'US Technology (Mega Cap)' },
+  '1:KKR Private Equity Fund VI':  { assetClass:'Alternatives', strategy:'Private Equity Buyout',      exposure:'Private Equity' },
+  '1:Blackstone Real Estate Trust':{ assetClass:'Alternatives', strategy:'Core Real Estate',           exposure:'Private Real Estate' },
+  '1:US Treasury 10Y':             { assetClass:'Fixed Income', strategy:'Government / Agency',        exposure:'US Government' },
+  '1:Goldman Sachs MMF':           { assetClass:'Cash',         strategy:'Money Market',               exposure:'Liquid Cash' },
+  // ── Client 2 — Whitfield
+  '2:Vanguard Total Market ETF':   { assetClass:'Equity',       strategy:'US Broad Market',            exposure:'US Total Market Equity' },
+  '2:Pimco Total Return Fund':     { assetClass:'Fixed Income', strategy:'Core / Aggregate Bond',      exposure:'Core Investment Grade' },
+  '2:Blackstone Real Estate Trust':{ assetClass:'Alternatives', strategy:'Core Real Estate',           exposure:'Private Real Estate' },
+  '2:Municipal Bond Fund':         { assetClass:'Fixed Income', strategy:'Municipal / Tax-Exempt',     exposure:'Tax-Exempt Income' },
+  '2:Goldman Sachs MMF':           { assetClass:'Cash',         strategy:'Money Market',               exposure:'Liquid Cash' },
+  // ── Client 3 — Morrison
+  '3:Vanguard S&P 500 ETF':        { assetClass:'Equity',       strategy:'US Large Cap Core',          exposure:'US Large Cap Core' },
+  '3:International Equity Fund':   { assetClass:'Equity',       strategy:'International Developed Equity', exposure:'International Developed Equity' },
+  '3:Bridgewater All Weather':     { assetClass:'Alternatives', strategy:'Macro / Hedge Fund',         exposure:'Diversifying Strategy' },
+  '3:Investment Grade Corp Bonds': { assetClass:'Fixed Income', strategy:'Investment Grade Credit',    exposure:'Investment Grade Credit' },
+  '3:Money Market Fund':           { assetClass:'Cash',         strategy:'Money Market',               exposure:'Liquid Cash' },
+  // ── Client 4 — Bancroft
+  '4:BlackRock Multi-Asset Fund':  { assetClass:'Equity',       strategy:'US Large Cap Core',          exposure:'US Multi-Asset Equity' },
+  '4:Vanguard Bond Index':         { assetClass:'Fixed Income', strategy:'Core / Aggregate Bond',      exposure:'Core Investment Grade' },
+  '4:Cohen & Steers Real Estate':  { assetClass:'Alternatives', strategy:'Listed Real Estate',         exposure:'Public Real Estate (REITs)' },
+  '4:Treasury Bills 6M':           { assetClass:'Fixed Income', strategy:'Short Duration',             exposure:'Short-Term Government' },
+  '4:Cash & Equivalents':          { assetClass:'Cash',         strategy:'Cash & Equivalents',         exposure:'Liquid Cash' },
+  // ── Client 5 — Augustine
+  '5:Berkshire Hathaway B':        { assetClass:'Equity',       strategy:'US Large Cap Value',         exposure:'US Large Cap Value' },
+  '5:Johnson & Johnson':           { assetClass:'Equity',       strategy:'US Large Cap Value',         exposure:'US Healthcare / Dividend' },
+  '5:Vanguard Total Bond':         { assetClass:'Fixed Income', strategy:'Core / Aggregate Bond',      exposure:'Core Investment Grade' },
+  '5:Augustine Family LLC':        { assetClass:'Alternatives', strategy:'Co-Investment / Family LLC', exposure:'Private Equity (Co-Invest)' },
+  '5:Cash & T-Bills':              { assetClass:'Cash',         strategy:'Short-Term Government',      exposure:'Short-Term Government' },
+  // ── Client 6 — Petrov
+  '6:iShares MSCI World ETF':      { assetClass:'Equity',       strategy:'Global Equity',              exposure:'Global Developed Equity' },
+  '6:Emerging Markets Fund':       { assetClass:'Equity',       strategy:'Emerging Market Equity',     exposure:'Emerging Market Equity' },
+  '6:PIMCO Global Bond Fund':      { assetClass:'Fixed Income', strategy:'Global Fixed Income',        exposure:'Global Core Fixed Income' },
+  '6:Gold ETF':                    { assetClass:'Alternatives', strategy:'Real Assets / Commodities',  exposure:'Gold / Real Assets' },
+  '6:Cash (Multi-currency)':       { assetClass:'Cash',         strategy:'Cash & Equivalents',         exposure:'Multi-Currency Cash' },
+  // ── Client 7 — Chen
+  '7:Vertex Technologies Stock':   { assetClass:'Equity',       strategy:'Concentrated / Single Stock',exposure:'Employer Equity (Vertex Tech)' },
+  '7:Vanguard Total Market':       { assetClass:'Equity',       strategy:'US Broad Market',            exposure:'US Total Market Equity' },
+  '7:Short-Term Bond Fund':        { assetClass:'Fixed Income', strategy:'Short Duration',             exposure:'Short Duration Credit' },
+  '7:California Muni Bonds':       { assetClass:'Fixed Income', strategy:'Municipal / Tax-Exempt',     exposure:'Tax-Exempt Income' },
+  '7:Cash & Money Market':         { assetClass:'Cash',         strategy:'Cash & Equivalents',         exposure:'Liquid Cash' },
+  // ── Client 8 — Sullivan
+  '8:Vanguard Dividend Appreciation':{ assetClass:'Equity',     strategy:'US Dividend / Income',       exposure:'US Dividend Equity' },
+  '8:iShares Core US Aggregate':   { assetClass:'Fixed Income', strategy:'Core / Aggregate Bond',      exposure:'Core Investment Grade' },
+  '8:Vanguard REIT Index':         { assetClass:'Alternatives', strategy:'Listed Real Estate',         exposure:'Public Real Estate (REITs)' },
+  '8:TIPS Fund':                   { assetClass:'Fixed Income', strategy:'Inflation-Linked',           exposure:'Inflation Protection (TIPS)' },
+  '8:Cash & CDs':                  { assetClass:'Cash',         strategy:'CDs / Bank Deposits',        exposure:'CDs & Bank Deposits' },
+};
+
+function enrichHolding(clientId, h) {
+  const meta = HOLDING_META[`${clientId}:${h.name}`];
+  if (meta) return { ...h, ...meta };
+  // Fallback: map legacy `type` to L1
+  const fallbackClass = {
+    'US Equity':'Equity','Fixed Income':'Fixed Income',
+    'Real Estate':'Alternatives','Private Equity':'Alternatives',
+    'Hedge Fund':'Alternatives','Cash':'Cash'
+  }[h.type] || 'Equity';
+  return { ...h, assetClass: fallbackClass, strategy: h.type, exposure: h.name };
+}
+
+// Per-client per-asset-class KPIs
+const PORTFOLIO_KPIS = {
+  1: {
+    equity: {
+      geographic:  [{ label:'US', pct:100 }],
+      sectors:     [{ label:'Technology', pct:100 }],
+      marketCap:   [{ label:'Mega Cap', pct:100 }],
+      ytdReturn: 22.4, beta: 1.25
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AAA — US Govt', pct:100 }],
+      geographic:    [{ label:'US', pct:100 }],
+      duration: 8.7, yieldToMaturity: 4.3
+    },
+    alternatives: {
+      subTypes: [{ label:'Private Equity Buyout', pct:56 }, { label:'Core Real Estate', pct:44 }],
+      netIRR: 18.4, vintageRange: '2019–2023'
+    },
+    cash: { yield: 5.1, instruments: [{ label:'Money Market', pct:100 }] }
+  },
+  2: {
+    equity: {
+      geographic:  [{ label:'US', pct:100 }],
+      sectors:     [{ label:'Technology', pct:28 }, { label:'Healthcare', pct:14 }, { label:'Financials', pct:13 }, { label:'Industrials', pct:12 }, { label:'Other', pct:33 }],
+      marketCap:   [{ label:'Large Cap', pct:72 }, { label:'Mid Cap', pct:18 }, { label:'Small Cap', pct:10 }],
+      ytdReturn: 14.3, beta: 1.0
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AAA/AA', pct:35 }, { label:'A', pct:28 }, { label:'BBB', pct:22 }, { label:'Municipal', pct:15 }],
+      geographic:    [{ label:'US', pct:85 }, { label:'International', pct:15 }],
+      duration: 6.2, yieldToMaturity: 3.8
+    },
+    alternatives: {
+      subTypes: [{ label:'Core Real Estate', pct:100 }],
+      netIRR: 9.4
+    },
+    cash: { yield: 5.1, instruments: [{ label:'Money Market', pct:100 }] }
+  },
+  3: {
+    equity: {
+      geographic:  [{ label:'US', pct:73 }, { label:'International Developed', pct:24 }, { label:'Emerging Markets', pct:3 }],
+      sectors:     [{ label:'Technology', pct:29 }, { label:'Financials', pct:14 }, { label:'Healthcare', pct:13 }, { label:'Consumer Disc.', pct:11 }, { label:'Other', pct:33 }],
+      marketCap:   [{ label:'Large Cap', pct:75 }, { label:'Mid Cap', pct:16 }, { label:'Small Cap', pct:9 }],
+      ytdReturn: 14.8, beta: 1.05
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'A', pct:42 }, { label:'BBB', pct:58 }],
+      geographic:    [{ label:'US', pct:80 }, { label:'International', pct:20 }],
+      duration: 7.1, yieldToMaturity: 5.2
+    },
+    alternatives: {
+      subTypes: [{ label:'Macro / Risk Parity', pct:100 }],
+      ytdReturn: 7.8, sharpe: 1.2
+    },
+    cash: { yield: 5.2, instruments: [{ label:'Money Market', pct:100 }] }
+  },
+  4: {
+    equity: {
+      geographic:  [{ label:'US', pct:68 }, { label:'International', pct:32 }],
+      sectors:     [{ label:'Technology', pct:22 }, { label:'Financials', pct:16 }, { label:'Healthcare', pct:15 }, { label:'Consumer Disc.', pct:14 }, { label:'Other', pct:33 }],
+      marketCap:   [{ label:'Large Cap', pct:78 }, { label:'Mid Cap', pct:16 }, { label:'Small Cap', pct:6 }],
+      ytdReturn: 11.2, beta: 0.95
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AAA/AA', pct:38 }, { label:'A', pct:28 }, { label:'BBB', pct:28 }, { label:'Short Govt', pct:6 }],
+      geographic:    [{ label:'US', pct:100 }],
+      duration: 4.8, yieldToMaturity: 4.7
+    },
+    alternatives: {
+      subTypes: [{ label:'Listed Real Estate (REITs)', pct:100 }],
+      dividendYield: 3.8, ytdReturn: 6.8
+    },
+    cash: { yield: 4.9, instruments: [{ label:'Cash & Equivalents', pct:100 }] }
+  },
+  5: {
+    equity: {
+      geographic:  [{ label:'US', pct:100 }],
+      sectors:     [{ label:'Financials / Conglomerate', pct:60 }, { label:'Healthcare', pct:40 }],
+      marketCap:   [{ label:'Mega Cap', pct:100 }],
+      ytdReturn: 15.9, dividendYield: 1.8
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AAA/AA', pct:38 }, { label:'A', pct:28 }, { label:'BBB', pct:34 }],
+      geographic:    [{ label:'US', pct:100 }],
+      duration: 6.4, yieldToMaturity: 4.6
+    },
+    alternatives: {
+      subTypes: [{ label:'Private Co-Investment', pct:100 }],
+      netIRR: 12.0
+    },
+    cash: { yield: 5.1, instruments: [{ label:'T-Bills / Short Govt', pct:100 }] }
+  },
+  6: {
+    equity: {
+      geographic:  [{ label:'International Developed', pct:64 }, { label:'Emerging Markets', pct:36 }],
+      sectors:     [{ label:'Technology', pct:24 }, { label:'Financials', pct:19 }, { label:'Consumer Disc.', pct:12 }, { label:'Healthcare', pct:10 }, { label:'Other', pct:35 }],
+      marketCap:   [{ label:'Large Cap', pct:70 }, { label:'Mid Cap', pct:22 }, { label:'Small Cap', pct:8 }],
+      ytdReturn: 5.8
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AAA/AA', pct:48 }, { label:'A', pct:22 }, { label:'BBB', pct:22 }, { label:'High Yield', pct:8 }],
+      geographic:    [{ label:'US', pct:42 }, { label:'Europe', pct:32 }, { label:'Asia/Pacific', pct:18 }, { label:'EM', pct:8 }],
+      duration: 5.6, yieldToMaturity: 4.1
+    },
+    alternatives: {
+      subTypes: [{ label:'Gold / Precious Metals', pct:100 }],
+      ytdReturn: 18.7
+    },
+    cash: { yield: 4.2, instruments: [{ label:'Multi-Currency Cash', pct:100 }] }
+  },
+  7: {
+    equity: {
+      geographic:  [{ label:'US', pct:100 }],
+      sectors:     [{ label:'Technology / Biotech', pct:67 }, { label:'Diversified Market', pct:33 }],
+      marketCap:   [{ label:'Mega Cap', pct:67 }, { label:'Mixed Cap', pct:33 }],
+      ytdReturn: 32.1, concentrationNote: 'VRTX represents 67% of equity sleeve — concentration risk'
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AA/A Short-Dur', pct:70 }, { label:'AA Muni', pct:30 }],
+      geographic:    [{ label:'US', pct:100 }],
+      duration: 2.8, yieldToMaturity: 3.6
+    },
+    alternatives: null,
+    cash: { yield: 5.0, instruments: [{ label:'Money Market', pct:100 }] }
+  },
+  8: {
+    equity: {
+      geographic:  [{ label:'US', pct:100 }],
+      sectors:     [{ label:'Healthcare', pct:18 }, { label:'Financials', pct:16 }, { label:'Technology', pct:15 }, { label:'Consumer Staples', pct:14 }, { label:'Industrials', pct:12 }, { label:'Other', pct:25 }],
+      marketCap:   [{ label:'Large Cap', pct:88 }, { label:'Mid Cap', pct:12 }],
+      ytdReturn: 14.2, dividendYield: 1.85
+    },
+    fixedIncome: {
+      creditQuality: [{ label:'AAA/AA (Govt/Agency)', pct:68 }, { label:'A', pct:18 }, { label:'BBB', pct:14 }],
+      geographic:    [{ label:'US', pct:100 }],
+      duration: 5.2, yieldToMaturity: 4.4
+    },
+    alternatives: {
+      subTypes: [{ label:'Listed Real Estate (REITs)', pct:100 }],
+      dividendYield: 3.8, ytdReturn: 8.6
+    },
+    cash: { yield: 5.1, instruments: [{ label:'CDs', pct:60 }, { label:'Money Market', pct:40 }] }
+  }
+};
+
 // ─── UTILITIES ────────────────────────────────────────────
 function formatCurrency(n) {
   if (n >= 1e9)  return '$' + (n / 1e9).toFixed(1) + 'B';
@@ -1158,17 +1415,6 @@ function renderServiceTab(client) {
 
 
 // ── Holdings Tab ──────────────────────────────────────────
-const ASSET_COLORS = {
-  'US Equity':      '#0C2340',
-  'Fixed Income':   '#B8923C',
-  'Real Estate':    '#6B8FAF',
-  'Private Equity': '#3D2B1F',
-  'Hedge Fund':     '#5A6B7A',
-  'Cash':           '#C8BFA8',
-  'Alternatives':   '#8B7355',
-  'Real Assets':    '#5A7A5A'
-};
-function assetColor(type) { return ASSET_COLORS[type] || '#9CA3AF'; }
 
 function renderDonut(slices) {
   const r = 40, cx = 60, cy = 60;
@@ -1187,71 +1433,230 @@ function renderDonut(slices) {
   return `<svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">${paths.join('')}</svg>`;
 }
 
-function renderHoldingsTab(client) {
-  const totals = {};
-  client.holdings.forEach(h => { totals[h.type] = (totals[h.type] || 0) + h.value; });
-  const totalVal = client.holdings.reduce((s, h) => s + h.value, 0);
+function renderKPIBars(items) {
+  if (!items || !items.length) return '';
+  const palette = ['#0C2340','#B8923C','#6B8FAF','#3D2B1F','#5A6B7A','#8B7355','#5A7A5A','#C8BFA8'];
+  return `<div class="kpi-bars">${items.map((item, i) => `
+    <div class="kpi-bar-row">
+      <span class="kpi-bar-label">${item.label}</span>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${item.pct}%;background:${palette[i % palette.length]}"></div></div>
+      <span class="kpi-bar-pct">${item.pct}%</span>
+    </div>`).join('')}
+  </div>`;
+}
 
-  const slices = Object.entries(totals).map(([type, val]) => ({
-    type, val, pct: (val / totalVal) * 100, color: assetColor(type)
-  })).sort((a, b) => b.pct - a.pct);
+function renderHoldingsKPIs(client, assetClass) {
+  const kpis = PORTFOLIO_KPIS[client.id];
+  if (!kpis) return '';
+  const map = { 'Equity': kpis.equity, 'Fixed Income': kpis.fixedIncome, 'Alternatives': kpis.alternatives, 'Cash': kpis.cash };
+  const d = map[assetClass];
+  if (!d) return '';
+
+  if (assetClass === 'Equity') {
+    return `<div class="kpi-panel">
+      <div class="kpi-card">
+        <div class="kpi-card-title">Geographic Exposure</div>
+        ${renderKPIBars(d.geographic)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-title">Sector Weights</div>
+        ${renderKPIBars(d.sectors)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-title">Market Cap &amp; Metrics</div>
+        ${renderKPIBars(d.marketCap)}
+        <div class="kpi-metrics">
+          ${d.ytdReturn  !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">YTD Return</span><span class="kpi-metric-val gain">+${d.ytdReturn}%</span></div>` : ''}
+          ${d.beta       !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Beta</span><span class="kpi-metric-val">${d.beta}</span></div>` : ''}
+          ${d.dividendYield !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Div. Yield</span><span class="kpi-metric-val">${d.dividendYield}%</span></div>` : ''}
+          ${d.concentrationNote ? `<div class="kpi-alert">${d.concentrationNote}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (assetClass === 'Fixed Income') {
+    return `<div class="kpi-panel">
+      <div class="kpi-card">
+        <div class="kpi-card-title">Credit Quality</div>
+        ${renderKPIBars(d.creditQuality)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-title">Geographic Mix</div>
+        ${renderKPIBars(d.geographic)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-title">Risk Metrics</div>
+        <div class="kpi-metrics">
+          <div class="kpi-metric"><span class="kpi-metric-label">Avg Duration</span><span class="kpi-metric-val">${d.duration}y</span></div>
+          <div class="kpi-metric"><span class="kpi-metric-label">Yield to Maturity</span><span class="kpi-metric-val">${d.yieldToMaturity}%</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (assetClass === 'Alternatives') {
+    return `<div class="kpi-panel">
+      <div class="kpi-card">
+        <div class="kpi-card-title">Sub-Type Breakdown</div>
+        ${renderKPIBars(d.subTypes)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-title">Performance Metrics</div>
+        <div class="kpi-metrics">
+          ${d.netIRR        !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Net IRR</span><span class="kpi-metric-val gain">${d.netIRR}%</span></div>` : ''}
+          ${d.ytdReturn     !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">YTD Return</span><span class="kpi-metric-val gain">+${d.ytdReturn}%</span></div>` : ''}
+          ${d.dividendYield !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Distribution Yield</span><span class="kpi-metric-val">${d.dividendYield}%</span></div>` : ''}
+          ${d.vintageRange  ? `<div class="kpi-metric"><span class="kpi-metric-label">Vintage Range</span><span class="kpi-metric-val">${d.vintageRange}</span></div>` : ''}
+          ${d.sharpe        !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Sharpe Ratio</span><span class="kpi-metric-val">${d.sharpe}</span></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (assetClass === 'Cash') {
+    return `<div class="kpi-panel" style="grid-template-columns:1fr 1fr">
+      <div class="kpi-card">
+        <div class="kpi-card-title">Instruments</div>
+        ${renderKPIBars(d.instruments)}
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card-title">Yield</div>
+        <div class="kpi-metrics">
+          <div class="kpi-metric"><span class="kpi-metric-label">Current Yield</span><span class="kpi-metric-val">${d.yield}%</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return '';
+}
+
+function renderHoldingsTab(client) {
+  const allHoldings = client.holdings.map(h => enrichHolding(client.id, h));
+  const totalVal    = allHoldings.reduce((s, h) => s + h.value, 0);
+
+  // L1 totals for top-level donut
+  const l1Totals = {};
+  allHoldings.forEach(h => { l1Totals[h.assetClass] = (l1Totals[h.assetClass] || 0) + h.value; });
+
+  // Filtered holdings (drilled class or all)
+  const viewHoldings = holdingsDrill ? allHoldings.filter(h => h.assetClass === holdingsDrill) : allHoldings;
+  const viewTotal    = viewHoldings.reduce((s, h) => s + h.value, 0);
+
+  // Build donut slices
+  let donutSlices;
+  if (holdingsDrill) {
+    // Always show L2 strategies within the drilled class
+    const l2T = {};
+    viewHoldings.forEach(h => { l2T[h.strategy] = (l2T[h.strategy] || 0) + h.value; });
+    donutSlices = Object.entries(l2T).map(([s, v]) => ({
+      label: s, val: v, pct: (v / viewTotal) * 100, color: L2_COLORS[s] || '#9CA3AF'
+    })).sort((a, b) => b.pct - a.pct);
+  } else if (holdingsLevel === 'strategy') {
+    // Flat L2 view across all classes
+    const l2T = {};
+    allHoldings.forEach(h => { l2T[h.strategy] = (l2T[h.strategy] || 0) + h.value; });
+    donutSlices = Object.entries(l2T).map(([s, v]) => ({
+      label: s, val: v, pct: (v / totalVal) * 100, color: L2_COLORS[s] || '#9CA3AF'
+    })).sort((a, b) => b.pct - a.pct);
+  } else {
+    // Default: L1 asset classes
+    donutSlices = Object.entries(l1Totals).map(([cls, v]) => ({
+      label: cls, val: v, pct: (v / totalVal) * 100, color: L1_COLORS[cls] || '#9CA3AF'
+    })).sort((a, b) => b.pct - a.pct);
+  }
+
+  const canDrill = !holdingsDrill && holdingsLevel === 'class';
+
+  const legendRows = donutSlices.map(s => {
+    const drillAttr = canDrill ? `data-drill-class="${s.label}"` : '';
+    return `<div class="donut-legend-row holdings-legend-row${canDrill ? ' drillable' : ''}" ${drillAttr}>
+        <span class="donut-legend-dot" style="background:${s.color}"></span>
+        <span class="donut-legend-label">${s.label}</span>
+        <span class="donut-legend-pct">${s.pct.toFixed(1)}%</span>
+        <span class="donut-legend-val">${formatCurrency(s.val)}</span>
+        ${canDrill ? '<span class="drill-chevron">›</span>' : ''}
+      </div>`;
+  }).join('');
+
+  const breadcrumb = holdingsDrill ? `
+    <div class="holdings-breadcrumb">
+      <button class="breadcrumb-back" data-holdings-back>All Assets</button>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">${holdingsDrill}</span>
+    </div>` : '';
+
+  const tableRows = viewHoldings.map(h => {
+    const displayName = holdingsView === 'exposure' ? h.exposure : h.name;
+    const displaySub  = holdingsView === 'exposure' ? h.strategy : (h.ticker || null);
+    const pctOfTotal  = (h.value / totalVal) * 100;
+    const l1Key       = h.assetClass.toLowerCase().replace(/ /g, '-');
+    return `<tr>
+        <td>
+          <div class="data-table-primary">${displayName}</div>
+          ${displaySub ? `<div class="data-table-sub">${displaySub}</div>` : ''}
+        </td>
+        <td><span class="l1-badge l1-${l1Key}">${h.assetClass}</span></td>
+        <td class="data-table-sub" style="max-width:160px;white-space:normal">${h.strategy}</td>
+        <td class="data-table-num">${formatCurrency(h.value)}</td>
+        <td>
+          <div class="alloc-bar-wrap">
+            <div class="alloc-bar"><div class="alloc-fill" style="width:${Math.min(pctOfTotal, 100)}%;background:${L1_COLORS[h.assetClass] || '#9CA3AF'}"></div></div>
+            <span class="data-table-sub">${pctOfTotal.toFixed(1)}%</span>
+          </div>
+        </td>
+        <td class="data-table-num ${h.gainLossPct >= 0 ? 'gain' : 'loss'}">${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%</td>
+      </tr>`;
+  }).join('');
 
   return `
+  ${breadcrumb}
   <div class="tab-section-header">
-    <div class="tab-section-title">${client.holdings.length} Positions &nbsp;·&nbsp; ${formatCurrency(totalVal)} Total</div>
+    <div class="tab-section-title">
+      ${viewHoldings.length} Position${viewHoldings.length !== 1 ? 's' : ''} &nbsp;·&nbsp; ${formatCurrency(holdingsDrill ? viewTotal : totalVal)}
+    </div>
+    <div class="holdings-controls">
+      <div class="toggle-group">
+        <button class="toggle-btn ${holdingsLevel === 'class'    ? 'active' : ''}" data-holdings-level="class">Asset Class</button>
+        <button class="toggle-btn ${holdingsLevel === 'strategy' ? 'active' : ''}" data-holdings-level="strategy">Strategy</button>
+      </div>
+      <div class="toggle-group">
+        <button class="toggle-btn ${holdingsView === 'product'  ? 'active' : ''}" data-holdings-view="product">Product</button>
+        <button class="toggle-btn ${holdingsView === 'exposure' ? 'active' : ''}" data-holdings-view="exposure">Exposure</button>
+      </div>
+    </div>
   </div>
 
   <div class="holdings-overview">
     <div class="donut-wrap">
-      ${renderDonut(slices)}
+      ${renderDonut(donutSlices)}
       <div class="donut-center">
-        <div class="donut-center-val">${formatCurrency(totalVal)}</div>
-        <div class="donut-center-label">Portfolio</div>
+        <div class="donut-center-val">${formatCurrency(holdingsDrill ? viewTotal : totalVal)}</div>
+        <div class="donut-center-label">${holdingsDrill || 'Portfolio'}</div>
       </div>
     </div>
     <div class="donut-legend">
-      ${slices.map(s => `
-        <div class="donut-legend-row">
-          <span class="donut-legend-dot" style="background:${s.color}"></span>
-          <span class="donut-legend-label">${s.type}</span>
-          <span class="donut-legend-pct">${s.pct.toFixed(1)}%</span>
-          <span class="donut-legend-val">${formatCurrency(s.val)}</span>
-        </div>`).join('')}
+      ${legendRows}
+      ${canDrill ? `<div class="drill-hint">Click a class to drill in</div>` : ''}
     </div>
   </div>
+
+  ${holdingsDrill ? renderHoldingsKPIs(client, holdingsDrill) : ''}
 
   <div class="panel-card" style="padding:0;overflow:hidden;margin-top:16px">
     <table class="data-table">
       <thead>
         <tr>
-          <th>Asset</th>
-          <th>Type</th>
+          <th>${holdingsView === 'exposure' ? 'Exposure' : 'Position'}</th>
+          <th>Asset Class</th>
+          <th>Strategy</th>
           <th style="text-align:right">Value</th>
-          <th>Allocation</th>
+          <th>Alloc.</th>
           <th style="text-align:right">Gain / Loss</th>
         </tr>
       </thead>
-      <tbody>
-        ${client.holdings.map(h => `
-          <tr>
-            <td>
-              <div class="data-table-primary">${h.name}</div>
-              ${h.ticker ? `<div class="data-table-sub">${h.ticker}</div>` : ''}
-            </td>
-            <td>
-              <span class="asset-type-dot" style="background:${assetColor(h.type)}"></span>
-              <span class="data-table-sub">${h.type}</span>
-            </td>
-            <td class="data-table-num">${formatCurrency(h.value)}</td>
-            <td>
-              <div class="alloc-bar-wrap">
-                <div class="alloc-bar"><div class="alloc-fill" style="width:${Math.min(h.allocation, 100)}%;background:${assetColor(h.type)}"></div></div>
-                <span class="data-table-sub">${h.allocation.toFixed(1)}%</span>
-              </div>
-            </td>
-            <td class="data-table-num ${h.gainLossPct >= 0 ? 'gain' : 'loss'}">${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%</td>
-          </tr>`).join('')}
-      </tbody>
+      <tbody>${tableRows}</tbody>
     </table>
   </div>`;
 }
@@ -1636,6 +2041,46 @@ function attachEventListeners() {
       if (id) { navigate('client/' + id); return; }
     }
 
+    // Holdings drilldown — drill into an asset class
+    const drillBtn = e.target.closest('[data-drill-class]');
+    if (drillBtn) {
+      holdingsDrill = drillBtn.getAttribute('data-drill-class');
+      const tc = document.getElementById('tab-content');
+      const client = clients.find(c => c.id === state.clientId);
+      if (tc && client) tc.innerHTML = renderTabContent(client);
+      return;
+    }
+
+    // Holdings drilldown — back to all assets
+    if (e.target.closest('[data-holdings-back]')) {
+      holdingsDrill = null;
+      const tc = document.getElementById('tab-content');
+      const client = clients.find(c => c.id === state.clientId);
+      if (tc && client) tc.innerHTML = renderTabContent(client);
+      return;
+    }
+
+    // Holdings level toggle (Asset Class / Strategy)
+    const levelBtn = e.target.closest('[data-holdings-level]');
+    if (levelBtn) {
+      holdingsLevel = levelBtn.getAttribute('data-holdings-level');
+      if (holdingsLevel === 'strategy') holdingsDrill = null; // strategy view is flat
+      const tc = document.getElementById('tab-content');
+      const client = clients.find(c => c.id === state.clientId);
+      if (tc && client) tc.innerHTML = renderTabContent(client);
+      return;
+    }
+
+    // Holdings view toggle (Product / Exposure)
+    const viewBtn = e.target.closest('[data-holdings-view]');
+    if (viewBtn) {
+      holdingsView = viewBtn.getAttribute('data-holdings-view');
+      const tc = document.getElementById('tab-content');
+      const client = clients.find(c => c.id === state.clientId);
+      if (tc && client) tc.innerHTML = renderTabContent(client);
+      return;
+    }
+
     // Tab switching
     const tabBtn = e.target.closest('[data-tab]');
     if (tabBtn) {
@@ -1703,4 +2148,9 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
-window.addEventListener('hashchange', () => { parseRoute(); renderApp(); });
+window.addEventListener('hashchange', () => {
+  const prevId = state.clientId;
+  parseRoute();
+  if (state.clientId !== prevId) { holdingsDrill = null; holdingsLevel = 'class'; holdingsView = 'product'; }
+  renderApp();
+});
