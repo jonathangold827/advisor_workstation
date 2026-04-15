@@ -1426,84 +1426,145 @@ a { text-decoration: none; color: inherit; }
    24. HOLDINGS DRILLDOWN
    ============================================================ */
 
-/* Controls row */
-.holdings-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+/* ── Donut slice interactivity ── */
+.donut-slice {
+  transition: opacity .18s ease;
+  transform-origin: 60px 60px;
 }
-.toggle-group {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-  flex-shrink: 0;
+.donut-slice.dimmed { opacity: 0.2; }
+.donut-slice.can-drill {
+  cursor: pointer;
+  transition: opacity .18s ease, transform .18s ease;
 }
-.toggle-btn {
-  padding: 5px 11px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-secondary);
+.donut-slice.can-drill:hover { transform: scale(1.06); }
+
+/* ── Legend column (right of donut) ── */
+.holdings-legend-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Level switcher pills — compact, above legend */
+.holdings-level-switcher {
+  display: flex;
+  gap: 0;
   background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px;
+  align-self: flex-start;
+  margin-bottom: 2px;
+}
+.level-pill {
+  padding: 4px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
   border: none;
-  border-right: 1px solid var(--border);
+  border-radius: 16px;
   cursor: pointer;
   font-family: inherit;
   transition: background .15s, color .15s;
   white-space: nowrap;
 }
-.toggle-btn:last-child { border-right: none; }
-.toggle-btn.active { background: var(--primary); color: #fff; }
-.toggle-btn:hover:not(.active) { background: var(--primary-light); color: var(--primary); }
-
-/* Breadcrumb */
-.holdings-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 12.5px;
+.level-pill.active {
+  background: var(--primary);
+  color: #fff;
 }
-.breadcrumb-back {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 3px 10px;
-  font-size: 12px;
-  color: var(--primary);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .15s;
-}
-.breadcrumb-back:hover { background: var(--primary-light); }
-.breadcrumb-sep { color: var(--text-muted); font-size: 14px; }
-.breadcrumb-current { font-weight: 700; color: var(--text-primary); }
+.level-pill:hover:not(.active) { color: var(--primary); }
 
 /* Drillable legend rows */
+.holdings-legend-row { transition: opacity .18s; }
 .holdings-legend-row.drillable {
   cursor: pointer;
   border-radius: 5px;
   padding: 3px 6px;
   margin: 0 -6px;
-  transition: background .15s;
+  transition: background .15s, opacity .18s;
 }
 .holdings-legend-row.drillable:hover { background: var(--primary-light); }
+.holdings-legend-row.legend-dimmed { opacity: 0.3; }
 .drill-chevron {
   margin-left: auto;
   color: var(--primary);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
-  opacity: .6;
+  opacity: .5;
+  flex-shrink: 0;
 }
 .holdings-legend-row.drillable:hover .drill-chevron { opacity: 1; }
 .drill-hint {
   font-size: 10.5px;
   color: var(--text-muted);
   font-style: italic;
-  margin-top: 8px;
   padding-left: 2px;
 }
+
+/* Breadcrumb */
+.holdings-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+}
+.breadcrumb-back {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 600;
+  transition: background .15s;
+}
+.breadcrumb-back:hover { background: var(--primary-light); }
+.breadcrumb-sep { color: var(--text-muted); font-size: 14px; }
+.breadcrumb-current { font-weight: 700; color: var(--text-primary); }
+
+/* Table bar: label + Product/Exposure view toggle */
+.holdings-table-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 16px 0 8px;
+}
+.holdings-table-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+}
+.view-pill-group {
+  display: flex;
+  gap: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px;
+}
+.view-pill {
+  padding: 3px 12px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.view-pill.active { background: var(--primary); color: #fff; }
+.view-pill:hover:not(.active) { color: var(--primary); }
 
 /* KPI Panel */
 .kpi-panel {
@@ -1597,8 +1658,9 @@ a { text-decoration: none; color: inherit; }
 /* Mobile */
 @media (max-width: 768px) {
   .kpi-panel { grid-template-columns: 1fr; }
-  .holdings-controls { gap: 8px; }
-  .kpi-bar-label { width: 100px; }
+  .kpi-bar-label { width: 90px; }
+  .holdings-legend-col { min-width: 0; }
+  .holdings-table-bar { flex-wrap: wrap; gap: 8px; }
 }
 
 /* ============================================================

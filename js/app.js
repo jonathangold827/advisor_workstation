@@ -1416,21 +1416,245 @@ function renderServiceTab(client) {
 
 // ── Holdings Tab ──────────────────────────────────────────
 
+// SVG path-arc donut: proper hit-testing, hover + click on slices
 function renderDonut(slices) {
-  const r = 40, cx = 60, cy = 60;
-  const circ = 2 * Math.PI * r;
-  let cumPct = 0;
+  if (!slices || !slices.length) return '';
+  const cx = 60, cy = 60, outerR = 50, innerR = 28;
+  const toRad = d => d * Math.PI / 180;
+  let startAngle = -90;
+
   const paths = slices.map(s => {
-    const dash   = (s.pct / 100) * circ;
-    const gap    = circ - dash;
-    const rotate = -90 + (cumPct / 100) * 360;
-    cumPct += s.pct;
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
-      stroke="${s.color}" stroke-width="20"
-      stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}"
-      transform="rotate(${rotate.toFixed(2)}, ${cx}, ${cy})"/>`;
+    const sweep = Math.min((s.pct / 100) * 360, 359.99);
+    const end   = startAngle + sweep;
+    const x1 = cx + outerR * Math.cos(toRad(startAngle));
+    const y1 = cy + outerR * Math.sin(toRad(startAngle));
+    const x2 = cx + outerR * Math.cos(toRad(end));
+    const y2 = cy + outerR * Math.sin(toRad(end));
+    const x3 = cx + innerR * Math.cos(toRad(end));
+    const y3 = cy + innerR * Math.sin(toRad(end));
+    const x4 = cx + innerR * Math.cos(toRad(startAngle));
+    const y4 = cy + innerR * Math.sin(toRad(startAngle));
+    const large = sweep > 180 ? 1 : 0;
+    const d = `M${x1.toFixed(2)},${y1.toFixed(2)} A${outerR},${outerR} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)} L${x3.toFixed(2)},${y3.toFixed(2)} A${innerR},${innerR} 0 ${large} 0 ${x4.toFixed(2)},${y4.toFixed(2)} Z`;
+    startAngle += sweep;
+    return `<path d="${d}" fill="${s.color}" stroke="var(--bg)" stroke-width="2.5"
+      class="donut-slice${s.drillClass ? ' can-drill' : ''}"
+      data-slice-label="${s.label}"
+      data-slice-val="${Math.round(s.val)}"
+      data-slice-pct="${s.pct.toFixed(1)}"
+      ${s.drillClass ? `data-drill-class="${s.drillClass}"` : ''}/>`;
   });
-  return `<svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">${paths.join('')}</svg>`;
+  return `<svg viewBox="0 0 120 120" class="donut-svg" id="holdings-donut">${paths.join('')}</svg>`;
+}
+
+function renderKPIBars(items) {
+  if (!items || !items.length) return '';
+  const palette = ['#0C2340','#B8923C','#6B8FAF','#3D2B1F','#5A6B7A','#8B7355','#5A7A5A','#C8BFA8'];
+  return `<div class="kpi-bars">${items.map((item, i) => `
+    <div class="kpi-bar-row">
+      <span class="kpi-bar-label">${item.label}</span>
+      <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${item.pct}%;background:${palette[i % palette.length]}"></div></div>
+      <span class="kpi-bar-pct">${item.pct}%</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderHoldingsKPIs(client, assetClass) {
+  const kpis = PORTFOLIO_KPIS[client.id];
+  if (!kpis) return '';
+  const map = { 'Equity': kpis.equity, 'Fixed Income': kpis.fixedIncome, 'Alternatives': kpis.alternatives, 'Cash': kpis.cash };
+  const d = map[assetClass];
+  if (!d) return '';
+
+  if (assetClass === 'Equity') {
+    return `<div class="kpi-panel">
+      <div class="kpi-card"><div class="kpi-card-title">Geographic Exposure</div>${renderKPIBars(d.geographic)}</div>
+      <div class="kpi-card"><div class="kpi-card-title">Sector Weights</div>${renderKPIBars(d.sectors)}</div>
+      <div class="kpi-card"><div class="kpi-card-title">Market Cap &amp; Metrics</div>${renderKPIBars(d.marketCap)}
+        <div class="kpi-metrics">
+          ${d.ytdReturn      !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">YTD Return</span><span class="kpi-metric-val gain">+${d.ytdReturn}%</span></div>` : ''}
+          ${d.beta           !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Beta</span><span class="kpi-metric-val">${d.beta}</span></div>` : ''}
+          ${d.dividendYield  !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Div. Yield</span><span class="kpi-metric-val">${d.dividendYield}%</span></div>` : ''}
+          ${d.concentrationNote ? `<div class="kpi-alert">${d.concentrationNote}</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+  if (assetClass === 'Fixed Income') {
+    return `<div class="kpi-panel">
+      <div class="kpi-card"><div class="kpi-card-title">Credit Quality</div>${renderKPIBars(d.creditQuality)}</div>
+      <div class="kpi-card"><div class="kpi-card-title">Geographic Mix</div>${renderKPIBars(d.geographic)}</div>
+      <div class="kpi-card"><div class="kpi-card-title">Risk Metrics</div>
+        <div class="kpi-metrics">
+          <div class="kpi-metric"><span class="kpi-metric-label">Avg Duration</span><span class="kpi-metric-val">${d.duration}y</span></div>
+          <div class="kpi-metric"><span class="kpi-metric-label">Yield to Maturity</span><span class="kpi-metric-val">${d.yieldToMaturity}%</span></div>
+        </div>
+      </div>
+    </div>`;
+  }
+  if (assetClass === 'Alternatives') {
+    return `<div class="kpi-panel">
+      <div class="kpi-card"><div class="kpi-card-title">Sub-Type Breakdown</div>${renderKPIBars(d.subTypes)}</div>
+      <div class="kpi-card"><div class="kpi-card-title">Performance Metrics</div>
+        <div class="kpi-metrics">
+          ${d.netIRR        !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Net IRR</span><span class="kpi-metric-val gain">${d.netIRR}%</span></div>` : ''}
+          ${d.ytdReturn     !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">YTD Return</span><span class="kpi-metric-val gain">+${d.ytdReturn}%</span></div>` : ''}
+          ${d.dividendYield !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Distribution Yield</span><span class="kpi-metric-val">${d.dividendYield}%</span></div>` : ''}
+          ${d.vintageRange  ? `<div class="kpi-metric"><span class="kpi-metric-label">Vintage Range</span><span class="kpi-metric-val">${d.vintageRange}</span></div>` : ''}
+          ${d.sharpe        !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Sharpe Ratio</span><span class="kpi-metric-val">${d.sharpe}</span></div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+  if (assetClass === 'Cash') {
+    return `<div class="kpi-panel" style="grid-template-columns:1fr 1fr">
+      <div class="kpi-card"><div class="kpi-card-title">Instruments</div>${renderKPIBars(d.instruments)}</div>
+      <div class="kpi-card"><div class="kpi-card-title">Yield</div>
+        <div class="kpi-metrics"><div class="kpi-metric"><span class="kpi-metric-label">Current Yield</span><span class="kpi-metric-val">${d.yield}%</span></div></div>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+function renderHoldingsTab(client) {
+  const allHoldings = client.holdings.map(h => enrichHolding(client.id, h));
+  const totalVal    = allHoldings.reduce((s, h) => s + h.value, 0);
+
+  const l1Totals = {};
+  allHoldings.forEach(h => { l1Totals[h.assetClass] = (l1Totals[h.assetClass] || 0) + h.value; });
+
+  const viewHoldings = holdingsDrill ? allHoldings.filter(h => h.assetClass === holdingsDrill) : allHoldings;
+  const viewTotal    = viewHoldings.reduce((s, h) => s + h.value, 0);
+
+  // Build donut slices — top-level L1 slices get drillClass for click-to-drill
+  let donutSlices;
+  const canDrill = !holdingsDrill && holdingsLevel === 'class';
+
+  if (holdingsDrill) {
+    const l2T = {};
+    viewHoldings.forEach(h => { l2T[h.strategy] = (l2T[h.strategy] || 0) + h.value; });
+    donutSlices = Object.entries(l2T).map(([s, v]) => ({
+      label: s, val: v, pct: (v / viewTotal) * 100, color: L2_COLORS[s] || '#9CA3AF'
+    })).sort((a, b) => b.pct - a.pct);
+  } else if (holdingsLevel === 'strategy') {
+    const l2T = {};
+    allHoldings.forEach(h => { l2T[h.strategy] = (l2T[h.strategy] || 0) + h.value; });
+    donutSlices = Object.entries(l2T).map(([s, v]) => ({
+      label: s, val: v, pct: (v / totalVal) * 100, color: L2_COLORS[s] || '#9CA3AF'
+    })).sort((a, b) => b.pct - a.pct);
+  } else {
+    donutSlices = Object.entries(l1Totals).map(([cls, v]) => ({
+      label: cls, val: v, pct: (v / totalVal) * 100,
+      color: L1_COLORS[cls] || '#9CA3AF',
+      drillClass: cls   // ← enables click-to-drill on the SVG path
+    })).sort((a, b) => b.pct - a.pct);
+  }
+
+  const centerDisplayVal   = formatCurrency(holdingsDrill ? viewTotal : totalVal);
+  const centerDisplayLabel = holdingsDrill ? holdingsDrill : 'Portfolio';
+
+  // Legend rows — drillable on legend click OR donut click
+  const legendRows = donutSlices.map(s => {
+    const drillAttr = canDrill ? `data-drill-class="${s.label}"` : '';
+    return `<div class="donut-legend-row holdings-legend-row${canDrill ? ' drillable' : ''}" ${drillAttr}
+        data-legend-label="${s.label}">
+        <span class="donut-legend-dot" style="background:${s.color}"></span>
+        <span class="donut-legend-label">${s.label}</span>
+        <span class="donut-legend-pct">${s.pct.toFixed(1)}%</span>
+        <span class="donut-legend-val">${formatCurrency(s.val)}</span>
+        ${canDrill ? '<span class="drill-chevron">›</span>' : ''}
+      </div>`;
+  }).join('');
+
+  // Breadcrumb (only when drilled in)
+  const breadcrumb = holdingsDrill ? `
+    <div class="holdings-breadcrumb">
+      <button class="breadcrumb-back" data-holdings-back>← All Assets</button>
+      <span class="breadcrumb-sep">›</span>
+      <span class="breadcrumb-current">${holdingsDrill}</span>
+    </div>` : '';
+
+  // Table rows
+  const tableRows = viewHoldings.map(h => {
+    const displayName = holdingsView === 'exposure' ? h.exposure : h.name;
+    const displaySub  = holdingsView === 'exposure' ? h.strategy : (h.ticker || null);
+    const pctOfTotal  = (h.value / totalVal) * 100;
+    const l1Key       = h.assetClass.toLowerCase().replace(/ /g, '-');
+    return `<tr>
+        <td>
+          <div class="data-table-primary">${displayName}</div>
+          ${displaySub ? `<div class="data-table-sub">${displaySub}</div>` : ''}
+        </td>
+        <td><span class="l1-badge l1-${l1Key}">${h.assetClass}</span></td>
+        <td class="data-table-sub" style="max-width:150px;white-space:normal;line-height:1.35">${h.strategy}</td>
+        <td class="data-table-num">${formatCurrency(h.value)}</td>
+        <td>
+          <div class="alloc-bar-wrap">
+            <div class="alloc-bar"><div class="alloc-fill" style="width:${Math.min(pctOfTotal, 100)}%;background:${L1_COLORS[h.assetClass] || '#9CA3AF'}"></div></div>
+            <span class="data-table-sub">${pctOfTotal.toFixed(1)}%</span>
+          </div>
+        </td>
+        <td class="data-table-num ${h.gainLossPct >= 0 ? 'gain' : 'loss'}">${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%</td>
+      </tr>`;
+  }).join('');
+
+  return `
+  ${breadcrumb}
+
+  <div class="tab-section-header">
+    <div class="tab-section-title">
+      ${viewHoldings.length} Position${viewHoldings.length !== 1 ? 's' : ''} &nbsp;·&nbsp; ${formatCurrency(holdingsDrill ? viewTotal : totalVal)}
+    </div>
+  </div>
+
+  <div class="holdings-overview">
+    <!-- Donut: hover any slice to see details, click to drill (L1 mode) -->
+    <div class="donut-wrap">
+      ${renderDonut(donutSlices)}
+      <div class="donut-center">
+        <div class="donut-center-val" id="donut-center-val">${centerDisplayVal}</div>
+        <div class="donut-center-label" id="donut-center-label">${centerDisplayLabel}</div>
+      </div>
+    </div>
+
+    <!-- Legend column with level switcher -->
+    <div class="holdings-legend-col">
+      <div class="holdings-level-switcher">
+        <button class="level-pill${holdingsLevel === 'class'    ? ' active' : ''}" data-holdings-level="class">Asset Class</button>
+        <button class="level-pill${holdingsLevel === 'strategy' ? ' active' : ''}" data-holdings-level="strategy">Strategy</button>
+      </div>
+      <div class="donut-legend" id="donut-legend">
+        ${legendRows}
+      </div>
+      ${canDrill ? `<div class="drill-hint">Click a slice or row to drill in</div>` : ''}
+    </div>
+  </div>
+
+  ${holdingsDrill ? renderHoldingsKPIs(client, holdingsDrill) : ''}
+
+  <div class="holdings-table-bar">
+    <span class="holdings-table-label">Positions</span>
+    <div class="view-pill-group">
+      <button class="view-pill${holdingsView === 'product'  ? ' active' : ''}" data-holdings-view="product">Product</button>
+      <button class="view-pill${holdingsView === 'exposure' ? ' active' : ''}" data-holdings-view="exposure">Exposure</button>
+    </div>
+  </div>
+  <div class="panel-card" style="padding:0;overflow:hidden">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>${holdingsView === 'exposure' ? 'Exposure' : 'Position'}</th>
+          <th>Asset Class</th>
+          <th>Strategy</th>
+          <th style="text-align:right">Value</th>
+          <th>Alloc.</th>
+          <th style="text-align:right">Gain / Loss</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+  </div>`;
 }
 
 function renderKPIBars(items) {
@@ -1969,6 +2193,81 @@ function removeTyping() {
   if (el) el.remove();
 }
 
+// ─── DONUT INTERACTIVITY ──────────────────────────────────
+function setupDonutInteractivity() {
+  const svg = document.getElementById('holdings-donut');
+  if (!svg) return;
+  const slices  = svg.querySelectorAll('.donut-slice');
+  const valEl   = document.getElementById('donut-center-val');
+  const lblEl   = document.getElementById('donut-center-label');
+  const legend  = document.getElementById('donut-legend');
+  if (!valEl || !lblEl) return;
+
+  const defVal = valEl.textContent;
+  const defLbl = lblEl.textContent;
+
+  // Highlight legend row matching the hovered slice label
+  function highlightLegend(label) {
+    if (!legend) return;
+    legend.querySelectorAll('.holdings-legend-row').forEach(row => {
+      row.classList.toggle('legend-dimmed', row.dataset.legendLabel !== label);
+    });
+  }
+  function resetLegend() {
+    if (!legend) return;
+    legend.querySelectorAll('.holdings-legend-row').forEach(r => r.classList.remove('legend-dimmed'));
+  }
+
+  slices.forEach(slice => {
+    slice.addEventListener('mouseenter', () => {
+      const label = slice.dataset.sliceLabel;
+      const val   = parseInt(slice.dataset.sliceVal, 10);
+      const pct   = slice.dataset.slicePct;
+      // Update center text
+      valEl.textContent = formatCurrency(val);
+      lblEl.textContent = `${pct}%`;
+      // Dim other slices
+      slices.forEach(s => s.classList.toggle('dimmed', s !== slice));
+      highlightLegend(label);
+    });
+
+    slice.addEventListener('mouseleave', () => {
+      valEl.textContent = defVal;
+      lblEl.textContent = defLbl;
+      slices.forEach(s => s.classList.remove('dimmed'));
+      resetLegend();
+    });
+
+    // Click to drill (only on L1 slices that have data-drill-class)
+    slice.addEventListener('click', () => {
+      const dc = slice.dataset.drillClass;
+      if (!dc) return;
+      holdingsDrill = dc;
+      const client = clients.find(c => c.id === state.clientId);
+      const tc = document.getElementById('tab-content');
+      if (tc && client) {
+        tc.innerHTML = renderTabContent(client);
+        setupDonutInteractivity();
+      }
+    });
+  });
+
+  // Legend row hover syncs with donut
+  if (legend) {
+    legend.querySelectorAll('.holdings-legend-row').forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        const label = row.dataset.legendLabel;
+        slices.forEach(s => s.classList.toggle('dimmed', s.dataset.sliceLabel !== label));
+        highlightLegend(label);
+      });
+      row.addEventListener('mouseleave', () => {
+        slices.forEach(s => s.classList.remove('dimmed'));
+        resetLegend();
+      });
+    });
+  }
+}
+
 // ─── MOBILE HELPERS ───────────────────────────────────────
 const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
 
@@ -2041,13 +2340,13 @@ function attachEventListeners() {
       if (id) { navigate('client/' + id); return; }
     }
 
-    // Holdings drilldown — drill into an asset class
+    // Holdings drilldown — drill into an asset class (legend row click; SVG handled by setupDonutInteractivity)
     const drillBtn = e.target.closest('[data-drill-class]');
-    if (drillBtn) {
+    if (drillBtn && !e.target.closest('#holdings-donut')) {
       holdingsDrill = drillBtn.getAttribute('data-drill-class');
       const tc = document.getElementById('tab-content');
       const client = clients.find(c => c.id === state.clientId);
-      if (tc && client) tc.innerHTML = renderTabContent(client);
+      if (tc && client) { tc.innerHTML = renderTabContent(client); setupDonutInteractivity(); }
       return;
     }
 
@@ -2056,7 +2355,7 @@ function attachEventListeners() {
       holdingsDrill = null;
       const tc = document.getElementById('tab-content');
       const client = clients.find(c => c.id === state.clientId);
-      if (tc && client) tc.innerHTML = renderTabContent(client);
+      if (tc && client) { tc.innerHTML = renderTabContent(client); setupDonutInteractivity(); }
       return;
     }
 
@@ -2064,10 +2363,10 @@ function attachEventListeners() {
     const levelBtn = e.target.closest('[data-holdings-level]');
     if (levelBtn) {
       holdingsLevel = levelBtn.getAttribute('data-holdings-level');
-      if (holdingsLevel === 'strategy') holdingsDrill = null; // strategy view is flat
+      if (holdingsLevel === 'strategy') holdingsDrill = null;
       const tc = document.getElementById('tab-content');
       const client = clients.find(c => c.id === state.clientId);
-      if (tc && client) tc.innerHTML = renderTabContent(client);
+      if (tc && client) { tc.innerHTML = renderTabContent(client); setupDonutInteractivity(); }
       return;
     }
 
@@ -2077,7 +2376,7 @@ function attachEventListeners() {
       holdingsView = viewBtn.getAttribute('data-holdings-view');
       const tc = document.getElementById('tab-content');
       const client = clients.find(c => c.id === state.clientId);
-      if (tc && client) tc.innerHTML = renderTabContent(client);
+      if (tc && client) { tc.innerHTML = renderTabContent(client); setupDonutInteractivity(); }
       return;
     }
 
@@ -2088,15 +2387,14 @@ function attachEventListeners() {
       if (tab && state.activeTab !== tab) {
         state.activeTab = tab;
         if (state.view === 'client') {
-          // Re-render just the tab content and tab bar
           const tc = document.getElementById('tab-content');
           const tb = document.getElementById('tab-bar');
           const client = clients.find(c => c.id === state.clientId);
           if (tc && client) tc.innerHTML = renderTabContent(client);
+          if (tab === 'holdings') setupDonutInteractivity();
           if (tb) tb.querySelectorAll('.tab-btn').forEach(b => {
             b.classList.toggle('active', b.getAttribute('data-tab') === tab);
           });
-          // Also update sidebar active state
           app.querySelectorAll('.nav-item[data-tab]').forEach(b => {
             b.classList.toggle('active', b.getAttribute('data-tab') === tab);
           });
@@ -2138,6 +2436,9 @@ function attachEventListeners() {
       if (countEl) countEl.textContent = filtered.length + ' of ' + clients.length + ' clients';
     });
   }
+
+  // Wire donut on initial load (if holdings tab is already active)
+  if (state.view === 'client' && state.activeTab === 'holdings') setupDonutInteractivity();
 }
 
 // ─── INIT ─────────────────────────────────────────────────
