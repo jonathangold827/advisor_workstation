@@ -1293,6 +1293,277 @@ function renderTransactionsTab(client) {
   </div>`;
 }
 
+// ─── CHATBOT ──────────────────────────────────────────────
+const chatState = {
+  open: false,
+  messages: []
+};
+
+function chatContextInfo() {
+  if (state.view === 'client') {
+    const c = clients.find(x => x.id === state.clientId);
+    return {
+      label: c ? c.displayName : 'Client',
+      level: 'client',
+      client: c,
+      prompts: ['Prepare call agenda', 'Last contact', 'Top holdings', 'Open requests', 'Milestones']
+    };
+  }
+  return {
+    label: 'Book of Business',
+    level: 'book',
+    client: null,
+    prompts: ['Who needs attention?', 'Overdue contacts', 'AUM summary', 'Open tasks', 'Milestones this month']
+  };
+}
+
+function chatResponse(text) {
+  const q = text.toLowerCase().trim();
+  const ctx = chatContextInfo();
+
+  // ── CLIENT LEVEL ────────────────────────────────────────
+  if (ctx.level === 'client') {
+    const c = ctx.client;
+    if (!c) return 'No client selected. Navigate to a client profile first.';
+
+    if (/agenda|call prep|prepare|talking point/.test(q)) {
+      const dsc = daysSince(c.lastTouchpoint.date);
+      const milestones = c.upcomingMilestones.filter(m => daysUntil(m.date) >= 0 && daysUntil(m.date) <= 90);
+      const openReqs = c.serviceRequests.filter(r => r.status !== 'completed');
+      const actions = computeNextBestActions(c);
+      return `**Call Agenda — ${c.displayName}**\n\n**Context:**\n• Last contact: ${dsc} day${dsc !== 1 ? 's' : ''} ago — ${c.lastTouchpoint.summary}\n• Portfolio: ${formatCurrency(c.aum)} AUM, +${(c.aumGrowthYTD * 100).toFixed(1)}% YTD\n\n**Open Items (${openReqs.length}):**\n${openReqs.length ? openReqs.slice(0, 4).map(r => `• ${r.title} [${r.priority.toUpperCase()}] · ${statusLabel(r.status)}`).join('\n') : '• None — all clear'}\n\n**Upcoming Milestones:**\n${milestones.length ? milestones.slice(0, 3).map(m => `• ${m.description} — ${formatDate(m.date)} (${daysUntil(m.date)}d)`).join('\n') : '• None in next 90 days'}\n\n**Suggested Topics:**\n${actions.map(a => `• ${a.title}`).join('\n')}`;
+    }
+
+    if (/last contact|last touch|last speak|last call|last meet|when.*contact/.test(q)) {
+      const dsc = daysSince(c.lastTouchpoint.date);
+      const tp = c.touchpoints[0];
+      return `Last contact with **${c.displayName}** was **${dsc} days ago** (${formatDate(c.lastTouchpoint.date)}).\n\n${tp ? `**${tp.title}**\n${tp.notes.slice(0, 220)}${tp.notes.length > 220 ? '…' : ''}` : c.lastTouchpoint.summary}`;
+    }
+
+    if (/hold|portfolio|asset|allocation|position/.test(q)) {
+      const totals = {};
+      c.holdings.forEach(h => { totals[h.type] = (totals[h.type] || 0) + h.value; });
+      const totalVal = c.holdings.reduce((s, h) => s + h.value, 0);
+      const byType = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+      const top3 = c.holdings.slice().sort((a, b) => b.value - a.value).slice(0, 3);
+      return `**${c.displayName} — ${formatCurrency(totalVal)} Portfolio**\n\n**By Asset Class:**\n${byType.map(([t, v]) => `• ${t}: ${formatCurrency(v)} (${((v / totalVal) * 100).toFixed(1)}%)`).join('\n')}\n\n**Top Positions:**\n${top3.map(h => `• ${h.name}: ${formatCurrency(h.value)} (${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%)`).join('\n')}`;
+    }
+
+    if (/service|request|open item|open task|ticket/.test(q)) {
+      const open = c.serviceRequests.filter(r => r.status !== 'completed');
+      if (open.length === 0) return `No open service requests for **${c.displayName}**. All clear!`;
+      return `**Open Service Requests — ${c.displayName}** (${open.length})\n\n${open.map(r => `• **${r.title}** [${r.priority.toUpperCase()}]\n  ${statusLabel(r.status)} · Due ${formatDate(r.dueDate)}\n  ${r.notes.slice(0, 100)}`).join('\n\n')}`;
+    }
+
+    if (/milestone|birthday|anniversary|upcoming/.test(q)) {
+      const ms = c.upcomingMilestones.filter(m => daysUntil(m.date) >= -14);
+      if (ms.length === 0) return `No upcoming milestones found for **${c.displayName}**.`;
+      return `**Upcoming Milestones — ${c.displayName}**\n\n${ms.map(m => { const d = daysUntil(m.date); return `• ${m.description}: ${formatDate(m.date)} (${d >= 0 ? `in ${d} days` : `${Math.abs(d)} days ago`})`; }).join('\n')}`;
+    }
+
+    if (/revenue|fee|ltv|lifetime|worth/.test(q)) {
+      const lv = c.ltvMetrics;
+      return `**Relationship Value — ${c.displayName}**\n\n• Est. Annual Revenue: **${formatCurrency(lv.estimatedAnnualRevenue)}**\n• Projected LTV: ${formatCurrency(lv.projectedLTV)}\n• Fee Rate: ${(lv.feeRate * 100).toFixed(2)}%\n• Tenure: ${lv.tenureYears} years\n• Referrals Given: ${lv.referralsGiven}\n• Services: ${lv.servicesUsed.join(', ')}`;
+    }
+
+    if (/health|score|status/.test(q)) {
+      const lv = c.ltvMetrics;
+      return `**${c.displayName}** — Health Score **${c.healthScore}/10** (${c.healthLabel})\n\n• Revenue: ${lv.revenueScore}/10\n• Engagement: ${lv.engagementScore}/10\n• Growth: ${lv.growthScore}/10\n• Tenure: ${lv.tenureScore}/10\n• Breadth: ${lv.breadthScore}/10`;
+    }
+
+    return `I'm viewing **${c.displayName}** (${formatCurrency(c.aum)} AUM, ${c.healthLabel}). Ask me about their holdings, service requests, milestones, call agenda, or relationship value.`;
+  }
+
+  // ── BOOK LEVEL ──────────────────────────────────────────
+  const totalAUM = clients.reduce((s, c) => s + c.aum, 0);
+  const totalRev = clients.reduce((s, c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0);
+  const atRisk = clients.filter(c => c.healthLabel === 'At Risk');
+  const overdue = clients.filter(c => daysSince(c.lastTouchpoint.date) > 60);
+  const openTasksCount = clients.reduce((s, c) => s + c.openTasks, 0);
+
+  if (/attention|at.?risk|critical|urgent/.test(q)) {
+    const parts = [];
+    if (atRisk.length) parts.push(`**At-Risk Clients (${atRisk.length}):**\n${atRisk.map(c => `• ${c.displayName} — ${c.healthScore}/10`).join('\n')}`);
+    if (overdue.length) parts.push(`**Overdue for Contact (${overdue.length}):**\n${overdue.map(c => `• ${c.displayName} — ${daysSince(c.lastTouchpoint.date)} days`).join('\n')}`);
+    const highPri = clients.flatMap(c => c.serviceRequests.filter(r => r.status !== 'completed' && r.priority === 'high').map(r => ({ name: c.displayName, title: r.title })));
+    if (highPri.length) parts.push(`**High-Priority Requests (${highPri.length}):**\n${highPri.slice(0, 4).map(x => `• ${x.name}: ${x.title}`).join('\n')}`);
+    return parts.length ? parts.join('\n\n') : 'No urgent items — your book is in great shape!';
+  }
+
+  if (/overdue|haven.t.*spoken|no contact|follow.?up/.test(q)) {
+    if (overdue.length === 0) return 'No clients are overdue for contact — great job staying on top of outreach!';
+    return `**Overdue for Contact (${overdue.length}):**\n${overdue.map(c => `• ${c.displayName} — ${daysSince(c.lastTouchpoint.date)} days since contact`).join('\n')}\n\nConsider scheduling outreach for these clients.`;
+  }
+
+  if (/aum|assets under|total.*portfolio|book.*value|book size/.test(q)) {
+    const byTier = {};
+    clients.forEach(c => { byTier[c.tier] = (byTier[c.tier] || 0) + c.aum; });
+    return `**Book of Business — ${formatCurrency(totalAUM)} AUM**\n\n**By Tier:**\n${Object.entries(byTier).sort((a, b) => b[1] - a[1]).map(([t, v]) => `• ${tierLabel(t)}: ${formatCurrency(v)} (${((v / totalAUM) * 100).toFixed(1)}%)`).join('\n')}\n\n• Est. Annual Revenue: ${formatCurrency(totalRev)}\n• Clients: ${clients.length}`;
+  }
+
+  if (/task|open item|request|service/.test(q)) {
+    const allOpen = clients.flatMap(c => c.serviceRequests.filter(r => r.status !== 'completed').map(r => ({ name: c.displayName, r })));
+    const highPri = allOpen.filter(x => x.r.priority === 'high');
+    return `**Open Tasks: ${openTasksCount}**\n\n**High Priority (${highPri.length}):**\n${highPri.slice(0, 5).map(x => `• ${x.name}: ${x.r.title}`).join('\n') || '• None'}\n\nTotal open service requests: ${allOpen.length}`;
+  }
+
+  if (/milestone|birthday|anniversary|upcoming|this week|this month/.test(q)) {
+    const soon = [];
+    clients.forEach(c => {
+      c.upcomingMilestones.forEach(m => {
+        const d = daysUntil(m.date);
+        if (d >= 0 && d <= 30) soon.push({ name: c.displayName, m, d });
+      });
+    });
+    soon.sort((a, b) => a.d - b.d);
+    if (soon.length === 0) return 'No milestones in the next 30 days.';
+    return `**Upcoming Milestones (next 30 days):**\n${soon.map(x => `• ${x.name}: ${x.m.description} — ${formatDate(x.m.date)} (in ${x.d}d)`).join('\n')}`;
+  }
+
+  if (/revenue|fees|earn|income/.test(q)) {
+    const top = [...clients].sort((a, b) => b.ltvMetrics.estimatedAnnualRevenue - a.ltvMetrics.estimatedAnnualRevenue);
+    return `**Estimated Annual Revenue: ${formatCurrency(totalRev)}**\n\n**By Client:**\n${top.map(c => `• ${c.displayName}: ${formatCurrency(c.ltvMetrics.estimatedAnnualRevenue)}/yr`).join('\n')}`;
+  }
+
+  if (/how many|number of client|client count/.test(q)) {
+    const thriving = clients.filter(c => c.healthLabel === 'Thriving').length;
+    const nurture  = clients.filter(c => c.healthLabel === 'Nurture').length;
+    const risk     = clients.filter(c => c.healthLabel === 'At Risk').length;
+    return `**${clients.length} clients** in your book:\n• Thriving: ${thriving}\n• Nurture: ${nurture}\n• At Risk: ${risk}`;
+  }
+
+  if (/health|score|average/.test(q)) {
+    const avg = (clients.reduce((s, c) => s + c.healthScore, 0) / clients.length).toFixed(1);
+    return `**Average Health Score: ${avg}/10**\n\n${clients.map(c => `• ${c.displayName}: ${c.healthScore}/10 (${c.healthLabel})`).join('\n')}`;
+  }
+
+  return `I can help you with your **${clients.length}-client book** (${formatCurrency(totalAUM)} AUM). Try asking about at-risk clients, overdue contacts, AUM summary, open tasks, upcoming milestones, or revenue.`;
+}
+
+function initChat() {
+  if (document.getElementById('chat-fab')) return;
+
+  const fab = document.createElement('button');
+  fab.id = 'chat-fab';
+  fab.className = 'chat-fab';
+  fab.setAttribute('aria-label', 'Open AI assistant');
+  fab.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+
+  const panel = document.createElement('div');
+  panel.id = 'chat-panel';
+  panel.className = 'chat-panel';
+  panel.innerHTML = `
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-header-icon">GC</div>
+        <div>
+          <div class="chat-header-title">AI Assistant</div>
+          <div class="chat-header-ctx" id="chat-ctx-label">Book of Business</div>
+        </div>
+      </div>
+      <button class="chat-close" id="chat-close" aria-label="Close">×</button>
+    </div>
+    <div class="chat-prompts" id="chat-prompts"></div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-welcome">
+        <div class="chat-welcome-icon">GC</div>
+        <div class="chat-welcome-text">Hello, ${advisor.name.split(' ')[0]}. Ask me anything about your book or navigate to a client for client-level insights.</div>
+      </div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" type="text" placeholder="Ask a question…" autocomplete="off" />
+      <button class="chat-send" id="chat-send" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>`;
+
+  document.body.appendChild(fab);
+  document.body.appendChild(panel);
+
+  fab.addEventListener('click', () => toggleChat(true));
+  document.getElementById('chat-close').addEventListener('click', () => toggleChat(false));
+
+  const input  = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+
+  function sendChatMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendChatMsg('user', text);
+    appendTyping();
+    setTimeout(() => {
+      removeTyping();
+      appendChatMsg('bot', chatResponse(text));
+    }, 500 + Math.random() * 500);
+  }
+
+  sendBtn.addEventListener('click', sendChatMessage);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') sendChatMessage(); });
+
+  updateChatContext();
+}
+
+function toggleChat(open) {
+  chatState.open = open;
+  const panel = document.getElementById('chat-panel');
+  const fab   = document.getElementById('chat-fab');
+  if (!panel || !fab) return;
+  panel.classList.toggle('open', open);
+  fab.classList.toggle('hidden', open);
+  if (open) { updateChatContext(); setTimeout(() => document.getElementById('chat-input')?.focus(), 320); }
+}
+
+function updateChatContext() {
+  const ctx = chatContextInfo();
+  const label = document.getElementById('chat-ctx-label');
+  const promptsEl = document.getElementById('chat-prompts');
+  if (label) label.textContent = ctx.label;
+  if (promptsEl) {
+    promptsEl.innerHTML = ctx.prompts.map(p =>
+      `<button class="chat-chip" data-prompt="${p}">${p}</button>`
+    ).join('');
+    promptsEl.querySelectorAll('.chat-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inp = document.getElementById('chat-input');
+        if (inp) { inp.value = btn.getAttribute('data-prompt'); document.getElementById('chat-send').click(); }
+      });
+    });
+  }
+}
+
+function appendChatMsg(role, text) {
+  chatState.messages.push({ role, text });
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  const welcome = container.querySelector('.chat-welcome');
+  if (welcome) welcome.remove();
+  const div = document.createElement('div');
+  div.className = `chat-msg chat-msg-${role}`;
+  const formatted = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  div.innerHTML = `<div class="chat-bubble">${formatted}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendTyping() {
+  const container = document.getElementById('chat-messages');
+  if (!container) return;
+  const div = document.createElement('div');
+  div.id = 'chat-typing';
+  div.className = 'chat-msg chat-msg-bot';
+  div.innerHTML = `<div class="chat-bubble chat-typing-indicator"><span></span><span></span><span></span></div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('chat-typing');
+  if (el) el.remove();
+}
+
 // ─── MOBILE HELPERS ───────────────────────────────────────
 const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
 
@@ -1316,6 +1587,7 @@ function renderApp() {
     </div>`;
 
   attachEventListeners();
+  updateChatContext();
 }
 
 // ─── SIDEBAR TOGGLE (MOBILE) ──────────────────────────────
@@ -1427,6 +1699,7 @@ function attachEventListeners() {
 function init() {
   parseRoute();
   renderApp();
+  initChat();
 }
 
 document.addEventListener('DOMContentLoaded', init);
