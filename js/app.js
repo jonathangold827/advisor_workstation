@@ -422,6 +422,87 @@ function computeNextBestActions(client) {
   return actions.slice(0, 3);
 }
 
+// ─── CA TASK DASHBOARD DATA ───────────────────────────────
+
+const CA_STAFF = [
+  { id: 'jpark',   name: 'Jessica Park',   role: 'ACA', initials: 'JP' },
+  { id: 'mtorres', name: 'Michael Torres', role: 'ACA', initials: 'MT' },
+  { id: 'awells',  name: 'Amanda Wells',   role: 'CA',  initials: 'AW' },
+  { id: 'lkim',    name: 'Lauren Kim',     role: 'ACA', initials: 'LK' },
+  { id: 'rchen',   name: 'Robert Chen',    role: 'SCA', initials: 'RC' },
+];
+
+const CA_TASK_TYPES = {
+  cash:       { label: 'Cash / Payments',        color: '#0C2340', subTypes: ['Wire Transfer','ACH','Check Request','Internal Transfer','RMD Distribution','Tax Payment','Bill Pay','Cash Raise','Cash Deployment'] },
+  transfer:   { label: 'Asset Transfer',          color: '#B8923C', subTypes: ['ACAT In','ACAT Out','DTC Transfer','In-Kind Transfer','Cost Basis Transfer','Physical Certificate'] },
+  account:    { label: 'Account Opening',         color: '#6B8FAF', subTypes: ['New Individual','Trust Account','IRA / Retirement','Joint Account','Sub-Account','529 Plan','Entity Account'] },
+  documents:  { label: 'Document / Reporting',    color: '#5A6B7A', subTypes: ['Meeting Book','Performance Report','Tax Documents','K-1 Package','Account Statement','Capital Gains Report','Custom Report'] },
+  compliance: { label: 'Compliance / Legal',      color: '#8B7355', subTypes: ['Annual Review','KYC Update','FBAR Filing','Suitability Update','Beneficiary Change','POA Update','AML Review'] },
+  estate:     { label: 'Estate / Planning',       color: '#3D2B1F', subTypes: ['Trust Update','Beneficiary Change','TOD Registration','Power of Attorney','Will Coordination'] },
+  general:    { label: 'General Request',         color: '#5A7A5A', subTypes: ['Client Inquiry','Research Request','Internal Coordination','Referral Processing','Other'] },
+};
+
+// Mutable task array — supports add/status-update in-session
+function d(n) { const x = new Date('2026-03-27'); x.setDate(x.getDate() + n); return x.toISOString().split('T')[0]; }
+
+let caTasks = [
+  // ── Harrington (id:1) — jpark
+  { id:'cat001', clientId:1, type:'documents', subType:'K-1 Package',        title:'K-1 Package — KKR & Blackstone',           assignedTo:'jpark',   priority:'high',   status:'in_progress',      createdDate:d(-8),  dueDate:d(14),  completedDate:null, estHours:3.0, actHours:null,  recurring:false, notes:'CPA deadline April 15. KKR Fund VI + Blackstone RE Trust.' },
+  { id:'cat002', clientId:1, type:'transfer',  subType:'In-Kind Transfer',    title:'PE Allocation Increase — $10M',             assignedTo:'jpark',   priority:'high',   status:'pending',          createdDate:d(-3),  dueDate:d(25),  completedDate:null, estHours:4.5, actHours:null,  recurring:false, notes:'Evaluate Apollo Fund VIII and Carlyle Partners VII capital call schedule.' },
+  { id:'cat003', clientId:1, type:'cash',      subType:'Wire Transfer',       title:'Quarterly Fee Debit — Q1 2026',             assignedTo:'jpark',   priority:'medium', status:'completed',        createdDate:d(-40), dueDate:d(-35), completedDate:d(-35),estHours:0.5, actHours:0.5,  recurring:true,  notes:'Auto-recurring Q1 fee. All accounts processed.' },
+
+  // ── Whitfield (id:2) — mtorres
+  { id:'cat004', clientId:2, type:'compliance',subType:'POA Update',          title:'Account Re-registration to Surviving Spouse',assignedTo:'mtorres', priority:'high',   status:'awaiting_client',  createdDate:d(-60), dueDate:d(7),   completedDate:null, estHours:2.0, actHours:1.5,  recurring:false, notes:'DocuSign sent twice. Follow up by phone — Margaret needs encouragement.' },
+  { id:'cat005', clientId:2, type:'estate',    subType:'Trust Update',        title:'Trust Restructuring — Post Harold Whitfield', assignedTo:'mtorres',priority:'high',   status:'in_progress',      createdDate:d(-90), dueDate:d(14),  completedDate:null, estHours:8.0, actHours:5.0,  recurring:false, notes:'Coordinating with estate attorney Jennifer Walsh. 3 beneficiary branches.' },
+  { id:'cat006', clientId:2, type:'documents', subType:'Tax Documents',       title:'2025 Annual Tax Package — Whitfield',        assignedTo:'mtorres', priority:'medium', status:'pending',          createdDate:d(-20), dueDate:d(19),  completedDate:null, estHours:1.5, actHours:null,  recurring:true,  notes:'Coordinate with CPA Patricia Moore. 1099s and K-1 included.' },
+  { id:'cat007', clientId:2, type:'cash',      subType:'Internal Transfer',   'title':'Trust Distribution Reinvestment',          assignedTo:'mtorres', priority:'low',    status:'completed',        createdDate:d(-65), dueDate:d(-62), completedDate:d(-62),estHours:0.5, actHours:0.5,  recurring:false, notes:'$250K reinvestment from trust distribution proceeds.' },
+
+  // ── Morrison (id:3) — jpark
+  { id:'cat008', clientId:3, type:'account',   subType:'529 Plan',            title:"Increase 529 Contribution — Connor Morrison",assignedTo:'jpark',   priority:'medium', status:'in_progress',      createdDate:d(-10), dueDate:d(30),  completedDate:null, estHours:1.5, actHours:0.5,  recurring:false, notes:'Max contribution 2026 before Connor graduates Yale May 2026. Confirm gift tax exclusion.' },
+  { id:'cat009', clientId:3, type:'documents', subType:'Meeting Book',        title:'Q1 2026 Review Book — Morrison',            assignedTo:'jpark',   priority:'medium', status:'completed',        createdDate:d(-25), dueDate:d(-18), completedDate:d(-19),estHours:2.0, actHours:1.8,  recurring:true,  notes:'Quarterly portfolio review book. Performance + positioning.' },
+  { id:'cat010', clientId:3, type:'cash',      subType:'Cash Deployment',     title:'Year-End Bonus Deployment — $1M',           assignedTo:'jpark',   priority:'medium', status:'completed',        createdDate:d(-73), dueDate:d(-68), completedDate:d(-70),estHours:1.0, actHours:1.0,  recurring:false, notes:'Allocated to VOO per client instruction.' },
+
+  // ── Bancroft (id:4) — mtorres
+  { id:'cat011', clientId:4, type:'compliance',subType:'Beneficiary Change',  title:'Update Beneficiaries — Bancroft Post-Divorce', assignedTo:'mtorres',priority:'high',   status:'in_progress',      createdDate:d(-60), dueDate:d(14),  completedDate:null, estHours:2.0, actHours:0.5,  recurring:false, notes:'Forms sent twice with no response. Call Liz before birthday April 7.' },
+  { id:'cat012', clientId:4, type:'documents', subType:'Tax Documents',       title:'2025 Split-Year Tax Docs — Post-Divorce',    assignedTo:'mtorres', priority:'high',   status:'awaiting_client',  createdDate:d(-25), dueDate:d(19),  completedDate:null, estHours:2.5, actHours:1.0,  recurring:false, notes:'Need documents from divorce attorney. CPA needs split-year treatment.' },
+  { id:'cat013', clientId:4, type:'account',   subType:'New Individual',      title:'Transfer Joint Brokerage to Individual',     assignedTo:'mtorres', priority:'medium', status:'in_progress',      createdDate:d(-40), dueDate:d(21),  completedDate:null, estHours:3.0, actHours:1.5,  recurring:false, notes:'Remaining joint accounts from divorce settlement. DTCC transfer in process.' },
+  { id:'cat014', clientId:4, type:'estate',    subType:'Will Coordination',   title:'Draft New Will & POA — Bancroft',            assignedTo:'lkim',    priority:'high',   status:'pending',          createdDate:d(-30), dueDate:d(30),  completedDate:null, estHours:1.0, actHours:null,  recurring:false, notes:'Existing will names William. Urgent — refer to estate attorney.' },
+
+  // ── Augustine (id:5) — awells
+  { id:'cat015', clientId:5, type:'estate',    subType:'Beneficiary Change',  title:'Add Grandson Henry to Family Trust',         assignedTo:'awells',  priority:'low',    status:'in_progress',      createdDate:d(-20), dueDate:d(45),  completedDate:null, estHours:1.5, actHours:0.5,  recurring:false, notes:'Henry Augustine, newborn. Adding as trust beneficiary.' },
+  { id:'cat016', clientId:5, type:'documents', subType:'Meeting Book',        title:'Annual Review Book — Augustine 2026',        assignedTo:'awells',  priority:'medium', status:'completed',        createdDate:d(-45), dueDate:d(-40), completedDate:d(-41),estHours:2.5, actHours:2.0,  recurring:true,  notes:'Full annual review package. Performance + estate update.' },
+  { id:'cat017', clientId:5, type:'cash',      subType:'RMD Distribution',    title:'Annual Contribution — Augustine Trust',      assignedTo:'awells',  priority:'low',    status:'completed',        createdDate:d(-115),dueDate:d(-112),completedDate:d(-113),estHours:0.5,actHours:0.5, recurring:true,  notes:'$500K annual contribution per trust instructions.' },
+
+  // ── Petrov (id:6) — mtorres
+  { id:'cat018', clientId:6, type:'compliance',subType:'FBAR Filing',         title:'FBAR Annual Filing — Petrov 2025',           assignedTo:'mtorres', priority:'high',   status:'awaiting_client',  createdDate:d(-45), dueDate:d(14),  completedDate:null, estHours:2.0, actHours:0.5,  recurring:true,  notes:'Foreign account reporting. Client unresponsive. Deadline approaching.' },
+  { id:'cat019', clientId:6, type:'compliance',subType:'Annual Review',       title:'Annual Review — Petrov OVERDUE',             assignedTo:'mtorres', priority:'high',   status:'pending',          createdDate:d(-30), dueDate:d(-1),  completedDate:null, estHours:2.0, actHours:null,  recurring:false, notes:'Last proper review March 2025. Multiple attempts unanswered.' },
+  { id:'cat020', clientId:6, type:'documents', subType:'Tax Documents',       title:'2025 Tax Package — Petrov',                  assignedTo:'lkim',    priority:'medium', status:'pending',          createdDate:d(-25), dueDate:d(19),  completedDate:null, estHours:1.0, actHours:null,  recurring:true,  notes:'Client unresponsive. Send via email and certified mail.' },
+
+  // ── Chen (id:7) — awells
+  { id:'cat021', clientId:7, type:'transfer',  subType:'In-Kind Transfer',    title:'RSU Vest Diversification — $2.1M Proceeds',  assignedTo:'awells',  priority:'high',   status:'in_progress',      createdDate:d(-5),  dueDate:d(22),  completedDate:null, estHours:4.0, actHours:1.5,  recurring:false, notes:'Reduce VRTX concentration to <40%. Present allocation options by April 10.' },
+  { id:'cat022', clientId:7, type:'cash',      subType:'Tax Payment',         title:'CA Estimated Tax Payment Q1 — Chen',        assignedTo:'awells',  priority:'high',   status:'completed',        createdDate:d(-35), dueDate:d(-31), completedDate:d(-31),estHours:0.5, actHours:0.5,  recurring:true,  notes:'Q1 2026 CA state estimated tax payment. Filed on time.' },
+  { id:'cat023', clientId:7, type:'documents', subType:'Custom Report',       title:'Equity Compensation Planning Guide — Chen',  assignedTo:'awells',  priority:'low',    status:'completed',        createdDate:d(-85), dueDate:d(-80), completedDate:d(-81),estHours:3.0, actHours:2.5,  recurring:false, notes:'ISO vs RSU tax treatment custom report. Forwarded to CPA.' },
+
+  // ── Sullivan (id:8) — awells
+  { id:'cat024', clientId:8, type:'cash',      subType:'RMD Distribution',    title:'2026 RMD Strategy — Sullivan IRA',           assignedTo:'awells',  priority:'medium', status:'completed',        createdDate:d(-110),dueDate:d(-105),completedDate:d(-106),estHours:1.0,actHours:1.0, recurring:true,  notes:'QCD to Scottsdale Food Bank included. $12K/mo distribution setup.' },
+  { id:'cat025', clientId:8, type:'documents', subType:'Meeting Book',        title:'Annual Review Book — Sullivan 2026',         assignedTo:'awells',  priority:'medium', status:'completed',        createdDate:d(-50), dueDate:d(-45), completedDate:d(-46),estHours:2.0, actHours:1.5,  recurring:true,  notes:'In-person Scottsdale meeting. Income goals met.' },
+  { id:'cat026', clientId:8, type:'cash',      subType:'ACH',                 title:'Monthly Income Distribution — Sullivan',     assignedTo:'awells',  priority:'medium', status:'in_progress',      createdDate:d(-2),  dueDate:d(3),   completedDate:null, estHours:0.5, actHours:null,  recurring:true,  notes:'$12,000/month to Sullivan Joint checking. Recurring monthly.' },
+
+  // ── Cross-client / general
+  { id:'cat027', clientId:1, type:'documents', subType:'Performance Report',  title:'Q1 2026 Performance Attribution — Harrington',assignedTo:'jpark',  priority:'medium', status:'pending',          createdDate:d(-3),  dueDate:d(10),  completedDate:null, estHours:2.0, actHours:null,  recurring:true,  notes:'Detailed attribution vs benchmark. Include tech commentary.' },
+  { id:'cat028', clientId:2, type:'cash',      subType:'Cash Raise',          title:'Raise Cash for Estate Legal Fees — Whitfield',assignedTo:'mtorres',priority:'high',   status:'pending',          createdDate:d(-1),  dueDate:d(7),   completedDate:null, estHours:1.0, actHours:null,  recurring:false, notes:'~$50K needed for estate attorney retainer. Source from MMF.' },
+  { id:'cat029', clientId:3, type:'general',   subType:'Client Inquiry',      title:"Connor Graduation Gift Research",            assignedTo:'jpark',   priority:'low',    status:'pending',          createdDate:d(-5),  dueDate:d(30),  completedDate:null, estHours:1.0, actHours:null,  recurring:false, notes:'Research premium Yale-themed gift options. Sarah asked for ideas.' },
+  { id:'cat030', clientId:5, type:'cash',      subType:'Wire Transfer',       title:'Christening Gift Wire — Henry Augustine',    assignedTo:'awells',  priority:'medium', status:'pending',          createdDate:d(-1),  dueDate:d(20),  completedDate:null, estHours:0.5, actHours:null,  recurring:false, notes:'Tom requested a gift wire for newborn Henry. Confirm amount and destination.' },
+];
+
+let caTasksNextId = 31;
+
+const OPS_VIEWS = { dashboard: 'dashboard', reports: 'reports' };
+let opsView = 'dashboard';
+let opsFilters = { assignee: 'all', client: 'all', type: 'all', status: 'all' };
+let showNewTaskModal = false;
+let newTaskDraft = { clientId: '', type: 'cash', subType: '', title: '', assignedTo: '', priority: 'medium', dueDate: '', estHours: '', recurring: false, notes: '' };
+
 // ─── ROUTER ───────────────────────────────────────────────
 function parseRoute() {
   const hash = window.location.hash || '#/';
@@ -430,7 +511,7 @@ function parseRoute() {
     state.view = 'client';
     state.clientId = parseInt(parts[1]);
     state.activeTab = 'overview';
-  } else if (['calendar', 'tasks', 'reports'].includes(parts[0])) {
+  } else if (['calendar', 'tasks', 'reports', 'operations'].includes(parts[0])) {
     state.view = parts[0];
     state.clientId = null;
   } else {
@@ -499,6 +580,8 @@ function renderSidebar() {
           ${openTasks > 0 ? `<span class="nav-badge">${openTasks}</span>` : ''}
         </button>
         <button class="nav-item ${state.view==='reports'?'active':''}" data-nav="reports">Reports</button>
+        <div class="nav-label" style="margin-top:12px">Operations</div>
+        <button class="nav-item ${state.view==='operations'?'active':''}" data-nav="operations">CA Task Dashboard</button>
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-stat-row">
@@ -1657,234 +1740,6 @@ function renderHoldingsTab(client) {
   </div>`;
 }
 
-function renderKPIBars(items) {
-  if (!items || !items.length) return '';
-  const palette = ['#0C2340','#B8923C','#6B8FAF','#3D2B1F','#5A6B7A','#8B7355','#5A7A5A','#C8BFA8'];
-  return `<div class="kpi-bars">${items.map((item, i) => `
-    <div class="kpi-bar-row">
-      <span class="kpi-bar-label">${item.label}</span>
-      <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${item.pct}%;background:${palette[i % palette.length]}"></div></div>
-      <span class="kpi-bar-pct">${item.pct}%</span>
-    </div>`).join('')}
-  </div>`;
-}
-
-function renderHoldingsKPIs(client, assetClass) {
-  const kpis = PORTFOLIO_KPIS[client.id];
-  if (!kpis) return '';
-  const map = { 'Equity': kpis.equity, 'Fixed Income': kpis.fixedIncome, 'Alternatives': kpis.alternatives, 'Cash': kpis.cash };
-  const d = map[assetClass];
-  if (!d) return '';
-
-  if (assetClass === 'Equity') {
-    return `<div class="kpi-panel">
-      <div class="kpi-card">
-        <div class="kpi-card-title">Geographic Exposure</div>
-        ${renderKPIBars(d.geographic)}
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-title">Sector Weights</div>
-        ${renderKPIBars(d.sectors)}
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-title">Market Cap &amp; Metrics</div>
-        ${renderKPIBars(d.marketCap)}
-        <div class="kpi-metrics">
-          ${d.ytdReturn  !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">YTD Return</span><span class="kpi-metric-val gain">+${d.ytdReturn}%</span></div>` : ''}
-          ${d.beta       !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Beta</span><span class="kpi-metric-val">${d.beta}</span></div>` : ''}
-          ${d.dividendYield !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Div. Yield</span><span class="kpi-metric-val">${d.dividendYield}%</span></div>` : ''}
-          ${d.concentrationNote ? `<div class="kpi-alert">${d.concentrationNote}</div>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }
-
-  if (assetClass === 'Fixed Income') {
-    return `<div class="kpi-panel">
-      <div class="kpi-card">
-        <div class="kpi-card-title">Credit Quality</div>
-        ${renderKPIBars(d.creditQuality)}
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-title">Geographic Mix</div>
-        ${renderKPIBars(d.geographic)}
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-title">Risk Metrics</div>
-        <div class="kpi-metrics">
-          <div class="kpi-metric"><span class="kpi-metric-label">Avg Duration</span><span class="kpi-metric-val">${d.duration}y</span></div>
-          <div class="kpi-metric"><span class="kpi-metric-label">Yield to Maturity</span><span class="kpi-metric-val">${d.yieldToMaturity}%</span></div>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  if (assetClass === 'Alternatives') {
-    return `<div class="kpi-panel">
-      <div class="kpi-card">
-        <div class="kpi-card-title">Sub-Type Breakdown</div>
-        ${renderKPIBars(d.subTypes)}
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-title">Performance Metrics</div>
-        <div class="kpi-metrics">
-          ${d.netIRR        !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Net IRR</span><span class="kpi-metric-val gain">${d.netIRR}%</span></div>` : ''}
-          ${d.ytdReturn     !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">YTD Return</span><span class="kpi-metric-val gain">+${d.ytdReturn}%</span></div>` : ''}
-          ${d.dividendYield !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Distribution Yield</span><span class="kpi-metric-val">${d.dividendYield}%</span></div>` : ''}
-          ${d.vintageRange  ? `<div class="kpi-metric"><span class="kpi-metric-label">Vintage Range</span><span class="kpi-metric-val">${d.vintageRange}</span></div>` : ''}
-          ${d.sharpe        !== undefined ? `<div class="kpi-metric"><span class="kpi-metric-label">Sharpe Ratio</span><span class="kpi-metric-val">${d.sharpe}</span></div>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }
-
-  if (assetClass === 'Cash') {
-    return `<div class="kpi-panel" style="grid-template-columns:1fr 1fr">
-      <div class="kpi-card">
-        <div class="kpi-card-title">Instruments</div>
-        ${renderKPIBars(d.instruments)}
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-card-title">Yield</div>
-        <div class="kpi-metrics">
-          <div class="kpi-metric"><span class="kpi-metric-label">Current Yield</span><span class="kpi-metric-val">${d.yield}%</span></div>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  return '';
-}
-
-function renderHoldingsTab(client) {
-  const allHoldings = client.holdings.map(h => enrichHolding(client.id, h));
-  const totalVal    = allHoldings.reduce((s, h) => s + h.value, 0);
-
-  // L1 totals for top-level donut
-  const l1Totals = {};
-  allHoldings.forEach(h => { l1Totals[h.assetClass] = (l1Totals[h.assetClass] || 0) + h.value; });
-
-  // Filtered holdings (drilled class or all)
-  const viewHoldings = holdingsDrill ? allHoldings.filter(h => h.assetClass === holdingsDrill) : allHoldings;
-  const viewTotal    = viewHoldings.reduce((s, h) => s + h.value, 0);
-
-  // Build donut slices
-  let donutSlices;
-  if (holdingsDrill) {
-    // Always show L2 strategies within the drilled class
-    const l2T = {};
-    viewHoldings.forEach(h => { l2T[h.strategy] = (l2T[h.strategy] || 0) + h.value; });
-    donutSlices = Object.entries(l2T).map(([s, v]) => ({
-      label: s, val: v, pct: (v / viewTotal) * 100, color: L2_COLORS[s] || '#9CA3AF'
-    })).sort((a, b) => b.pct - a.pct);
-  } else if (holdingsLevel === 'strategy') {
-    // Flat L2 view across all classes
-    const l2T = {};
-    allHoldings.forEach(h => { l2T[h.strategy] = (l2T[h.strategy] || 0) + h.value; });
-    donutSlices = Object.entries(l2T).map(([s, v]) => ({
-      label: s, val: v, pct: (v / totalVal) * 100, color: L2_COLORS[s] || '#9CA3AF'
-    })).sort((a, b) => b.pct - a.pct);
-  } else {
-    // Default: L1 asset classes
-    donutSlices = Object.entries(l1Totals).map(([cls, v]) => ({
-      label: cls, val: v, pct: (v / totalVal) * 100, color: L1_COLORS[cls] || '#9CA3AF'
-    })).sort((a, b) => b.pct - a.pct);
-  }
-
-  const canDrill = !holdingsDrill && holdingsLevel === 'class';
-
-  const legendRows = donutSlices.map(s => {
-    const drillAttr = canDrill ? `data-drill-class="${s.label}"` : '';
-    return `<div class="donut-legend-row holdings-legend-row${canDrill ? ' drillable' : ''}" ${drillAttr}>
-        <span class="donut-legend-dot" style="background:${s.color}"></span>
-        <span class="donut-legend-label">${s.label}</span>
-        <span class="donut-legend-pct">${s.pct.toFixed(1)}%</span>
-        <span class="donut-legend-val">${formatCurrency(s.val)}</span>
-        ${canDrill ? '<span class="drill-chevron">›</span>' : ''}
-      </div>`;
-  }).join('');
-
-  const breadcrumb = holdingsDrill ? `
-    <div class="holdings-breadcrumb">
-      <button class="breadcrumb-back" data-holdings-back>All Assets</button>
-      <span class="breadcrumb-sep">›</span>
-      <span class="breadcrumb-current">${holdingsDrill}</span>
-    </div>` : '';
-
-  const tableRows = viewHoldings.map(h => {
-    const displayName = holdingsView === 'exposure' ? h.exposure : h.name;
-    const displaySub  = holdingsView === 'exposure' ? h.strategy : (h.ticker || null);
-    const pctOfTotal  = (h.value / totalVal) * 100;
-    const l1Key       = h.assetClass.toLowerCase().replace(/ /g, '-');
-    return `<tr>
-        <td>
-          <div class="data-table-primary">${displayName}</div>
-          ${displaySub ? `<div class="data-table-sub">${displaySub}</div>` : ''}
-        </td>
-        <td><span class="l1-badge l1-${l1Key}">${h.assetClass}</span></td>
-        <td class="data-table-sub" style="max-width:160px;white-space:normal">${h.strategy}</td>
-        <td class="data-table-num">${formatCurrency(h.value)}</td>
-        <td>
-          <div class="alloc-bar-wrap">
-            <div class="alloc-bar"><div class="alloc-fill" style="width:${Math.min(pctOfTotal, 100)}%;background:${L1_COLORS[h.assetClass] || '#9CA3AF'}"></div></div>
-            <span class="data-table-sub">${pctOfTotal.toFixed(1)}%</span>
-          </div>
-        </td>
-        <td class="data-table-num ${h.gainLossPct >= 0 ? 'gain' : 'loss'}">${h.gainLossPct >= 0 ? '+' : ''}${h.gainLossPct.toFixed(1)}%</td>
-      </tr>`;
-  }).join('');
-
-  return `
-  ${breadcrumb}
-  <div class="tab-section-header">
-    <div class="tab-section-title">
-      ${viewHoldings.length} Position${viewHoldings.length !== 1 ? 's' : ''} &nbsp;·&nbsp; ${formatCurrency(holdingsDrill ? viewTotal : totalVal)}
-    </div>
-    <div class="holdings-controls">
-      <div class="toggle-group">
-        <button class="toggle-btn ${holdingsLevel === 'class'    ? 'active' : ''}" data-holdings-level="class">Asset Class</button>
-        <button class="toggle-btn ${holdingsLevel === 'strategy' ? 'active' : ''}" data-holdings-level="strategy">Strategy</button>
-      </div>
-      <div class="toggle-group">
-        <button class="toggle-btn ${holdingsView === 'product'  ? 'active' : ''}" data-holdings-view="product">Product</button>
-        <button class="toggle-btn ${holdingsView === 'exposure' ? 'active' : ''}" data-holdings-view="exposure">Exposure</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="holdings-overview">
-    <div class="donut-wrap">
-      ${renderDonut(donutSlices)}
-      <div class="donut-center">
-        <div class="donut-center-val">${formatCurrency(holdingsDrill ? viewTotal : totalVal)}</div>
-        <div class="donut-center-label">${holdingsDrill || 'Portfolio'}</div>
-      </div>
-    </div>
-    <div class="donut-legend">
-      ${legendRows}
-      ${canDrill ? `<div class="drill-hint">Click a class to drill in</div>` : ''}
-    </div>
-  </div>
-
-  ${holdingsDrill ? renderHoldingsKPIs(client, holdingsDrill) : ''}
-
-  <div class="panel-card" style="padding:0;overflow:hidden;margin-top:16px">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>${holdingsView === 'exposure' ? 'Exposure' : 'Position'}</th>
-          <th>Asset Class</th>
-          <th>Strategy</th>
-          <th style="text-align:right">Value</th>
-          <th>Alloc.</th>
-          <th style="text-align:right">Gain / Loss</th>
-        </tr>
-      </thead>
-      <tbody>${tableRows}</tbody>
-    </table>
-  </div>`;
-}
-
 // ── Transactions Tab ──────────────────────────────────────
 function renderTransactionsTab(client) {
   const txs = client.recentTransactions;
@@ -2268,6 +2123,177 @@ function setupDonutInteractivity() {
   }
 }
 
+// ─── OPERATIONS VIEW (CA Task Dashboard) ──────────────────
+function renderOperationsView() {
+  const STATUS_META = {
+    pending:          { label: 'Pending',         color: '#5A6B7A' },
+    in_progress:      { label: 'In Progress',     color: '#0C2340' },
+    awaiting_client:  { label: 'Awaiting Client', color: '#B8923C' },
+    completed:        { label: 'Completed',       color: '#3A7A3A' },
+  };
+  const PRIORITY_META = { high: { label: 'High', color: '#C0392B' }, medium: { label: 'Medium', color: '#B8923C' }, low: { label: 'Low', color: '#5A7A5A' } };
+
+  // ── Filtered task list ────────────────────────────────
+  let tasks = [...caTasks];
+  if (opsFilters.assignee !== 'all') tasks = tasks.filter(t => t.assignedTo === opsFilters.assignee);
+  if (opsFilters.client  !== 'all') tasks = tasks.filter(t => String(t.clientId) === opsFilters.client);
+  if (opsFilters.type    !== 'all') tasks = tasks.filter(t => t.type === opsFilters.type);
+  if (opsFilters.status  !== 'all') tasks = tasks.filter(t => t.status === opsFilters.status);
+
+  // ── Stats ─────────────────────────────────────────────
+  const allTasks = caTasks;
+  const open     = allTasks.filter(t => t.status !== 'completed').length;
+  const overdue  = allTasks.filter(t => t.status !== 'completed' && t.dueDate < TODAY).length;
+  const done     = allTasks.filter(t => t.status === 'completed').length;
+  const awaiting = allTasks.filter(t => t.status === 'awaiting_client').length;
+
+  // ── Status columns for board view ─────────────────────
+  const statuses = ['pending', 'in_progress', 'awaiting_client', 'completed'];
+
+  function clientName(id) { const c = clients.find(x => x.id === id); return c ? c.displayName.split(' ')[1] : 'Unknown'; }
+  function staffName(id)  { const s = CA_STAFF.find(x => x.id === id); return s ? s.name.split(' ')[0] : id; }
+
+  function taskCard(t) {
+    const sm = STATUS_META[t.status] || STATUS_META.pending;
+    const pm = PRIORITY_META[t.priority] || PRIORITY_META.medium;
+    const tm = CA_TASK_TYPES[t.type] || CA_TASK_TYPES.general;
+    const isOverdue = t.status !== 'completed' && t.dueDate < TODAY;
+    return `
+    <div class="ops-task-card${isOverdue ? ' overdue' : ''}" data-task-id="${t.id}">
+      <div class="ops-card-header">
+        <span class="ops-type-dot" style="background:${tm.color}"></span>
+        <span class="ops-card-type">${tm.label}</span>
+        <span class="ops-priority-badge" style="color:${pm.color}">${pm.label}</span>
+      </div>
+      <div class="ops-card-title">${t.title}</div>
+      <div class="ops-card-sub">${t.subType}</div>
+      <div class="ops-card-meta">
+        <span class="ops-card-client">${clientName(t.clientId)}</span>
+        <span class="ops-card-assignee">${staffName(t.assignedTo)}</span>
+        <span class="ops-card-due${isOverdue ? ' overdue-text' : ''}">Due ${t.dueDate}</span>
+      </div>
+      ${t.notes ? `<div class="ops-card-notes">${t.notes.slice(0, 80)}${t.notes.length > 80 ? '…' : ''}</div>` : ''}
+    </div>`;
+  }
+
+  const filterBar = `
+  <div class="ops-filter-bar">
+    <select class="ops-filter-sel" data-ops-filter="assignee">
+      <option value="all">All Staff</option>
+      ${CA_STAFF.map(s => `<option value="${s.id}"${opsFilters.assignee===s.id?' selected':''}>${s.name} (${s.role})</option>`).join('')}
+    </select>
+    <select class="ops-filter-sel" data-ops-filter="client">
+      <option value="all">All Clients</option>
+      ${clients.map(c => `<option value="${c.id}"${opsFilters.client===String(c.id)?' selected':''}>${c.displayName}</option>`).join('')}
+    </select>
+    <select class="ops-filter-sel" data-ops-filter="type">
+      <option value="all">All Types</option>
+      ${Object.entries(CA_TASK_TYPES).map(([k,v]) => `<option value="${k}"${opsFilters.type===k?' selected':''}>${v.label}</option>`).join('')}
+    </select>
+    <select class="ops-filter-sel" data-ops-filter="status">
+      <option value="all">All Status</option>
+      ${Object.entries(STATUS_META).map(([k,v]) => `<option value="${k}"${opsFilters.status===k?' selected':''}>${v.label}</option>`).join('')}
+    </select>
+    <button class="ops-add-btn" data-ops-new-task>+ New Task</button>
+  </div>`;
+
+  const board = opsView === 'dashboard' ? `
+  <div class="ops-board">
+    ${statuses.map(st => {
+      const col = tasks.filter(t => t.status === st);
+      const sm = STATUS_META[st];
+      return `
+      <div class="ops-board-col">
+        <div class="ops-col-header" style="border-top:3px solid ${sm.color}">
+          <span class="ops-col-title">${sm.label}</span>
+          <span class="ops-col-count">${col.length}</span>
+        </div>
+        <div class="ops-col-cards">
+          ${col.length ? col.map(taskCard).join('') : '<div class="ops-empty-col">No tasks</div>'}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>` : renderOpsReports();
+
+  const viewToggle = `
+  <div class="ops-view-toggle">
+    <button class="ops-view-btn${opsView==='dashboard'?' active':''}" data-ops-view="dashboard">Task Board</button>
+    <button class="ops-view-btn${opsView==='reports'?' active':''}" data-ops-view="reports">Reports</button>
+  </div>`;
+
+  return `
+  <div class="main-content">
+    <div class="page-header">
+      <div class="page-title-row">
+        <div>
+          <h1 class="page-title">CA Task Dashboard</h1>
+          <p class="page-subtitle">Client Associate operations &amp; task tracking</p>
+        </div>
+        ${viewToggle}
+      </div>
+    </div>
+    <div class="ops-stats-bar">
+      <div class="ops-stat"><div class="ops-stat-val">${open}</div><div class="ops-stat-label">Open Tasks</div></div>
+      <div class="ops-stat ops-stat-alert"><div class="ops-stat-val">${overdue}</div><div class="ops-stat-label">Overdue</div></div>
+      <div class="ops-stat ops-stat-warn"><div class="ops-stat-val">${awaiting}</div><div class="ops-stat-label">Awaiting Client</div></div>
+      <div class="ops-stat ops-stat-ok"><div class="ops-stat-val">${done}</div><div class="ops-stat-label">Completed</div></div>
+      <div class="ops-stat"><div class="ops-stat-val">${allTasks.length}</div><div class="ops-stat-label">Total Tasks</div></div>
+    </div>
+    ${filterBar}
+    ${board}
+  </div>`;
+}
+
+function renderOpsReports() {
+  // ACA utilization table
+  const staffRows = CA_STAFF.map(s => {
+    const assigned = caTasks.filter(t => t.assignedTo === s.id);
+    const open     = assigned.filter(t => t.status !== 'completed').length;
+    const done     = assigned.filter(t => t.status === 'completed').length;
+    const overdue  = assigned.filter(t => t.status !== 'completed' && t.dueDate < TODAY).length;
+    const estHrs   = assigned.reduce((sum, t) => sum + (t.estHours || 0), 0);
+    return `<tr>
+      <td><strong>${s.name}</strong><br><span class="data-table-sub">${s.role}</span></td>
+      <td style="text-align:center">${assigned.length}</td>
+      <td style="text-align:center">${open}</td>
+      <td style="text-align:center;color:${overdue>0?'#C0392B':'inherit'}">${overdue}</td>
+      <td style="text-align:center">${done}</td>
+      <td style="text-align:right">${estHrs.toFixed(1)}h</td>
+    </tr>`;
+  }).join('');
+
+  // Client breakdown table
+  const clientRows = clients.map(c => {
+    const ct    = caTasks.filter(t => t.clientId === c.id);
+    const open  = ct.filter(t => t.status !== 'completed').length;
+    const hi    = ct.filter(t => t.priority === 'high' && t.status !== 'completed').length;
+    return `<tr>
+      <td><strong>${c.displayName}</strong></td>
+      <td style="text-align:center">${ct.length}</td>
+      <td style="text-align:center">${open}</td>
+      <td style="text-align:center;color:${hi>0?'#C0392B':'inherit'}">${hi}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="ops-reports">
+    <div class="panel-card">
+      <div class="panel-card-title">Staff Utilization</div>
+      <table class="data-table">
+        <thead><tr><th>Staff Member</th><th style="text-align:center">Assigned</th><th style="text-align:center">Open</th><th style="text-align:center">Overdue</th><th style="text-align:center">Done</th><th style="text-align:right">Est. Hours</th></tr></thead>
+        <tbody>${staffRows}</tbody>
+      </table>
+    </div>
+    <div class="panel-card" style="margin-top:16px">
+      <div class="panel-card-title">Client Task Load</div>
+      <table class="data-table">
+        <thead><tr><th>Client</th><th style="text-align:center">Total</th><th style="text-align:center">Open</th><th style="text-align:center">High Priority</th></tr></thead>
+        <tbody>${clientRows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
 // ─── MOBILE HELPERS ───────────────────────────────────────
 const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
 
@@ -2277,9 +2303,10 @@ function renderApp() {
   const viewMap = {
     advisor:  renderAdvisorView,
     client:   renderClientView,
-    calendar: renderCalendarView,
-    tasks:    renderTasksView,
-    reports:  renderReportsView
+    calendar:   renderCalendarView,
+    tasks:      renderTasksView,
+    reports:    renderReportsView,
+    operations: renderOperationsView
   };
   const main = (viewMap[state.view] || renderAdvisorView)();
 
@@ -2416,6 +2443,28 @@ function attachEventListeners() {
       state.filter.health = healthBtn.getAttribute('data-health');
       renderApp(); return;
     }
+
+    // Ops view toggle (Task Board / Reports)
+    const opsViewBtn = e.target.closest('[data-ops-view]');
+    if (opsViewBtn) {
+      opsView = opsViewBtn.getAttribute('data-ops-view');
+      renderApp(); return;
+    }
+
+    // Ops new task button
+    if (e.target.closest('[data-ops-new-task]')) {
+      showNewTaskModal = true;
+      renderApp(); return;
+    }
+  });
+
+  // Ops filter selects
+  document.querySelectorAll('[data-ops-filter]').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const key = e.target.getAttribute('data-ops-filter');
+      opsFilters[key] = e.target.value;
+      renderApp();
+    });
   });
 
   // Sort

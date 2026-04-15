@@ -1961,6 +1961,127 @@ a { text-decoration: none; color: inherit; }
 .mobile-menu-btn span::before { top: -5px; }
 .mobile-menu-btn span::after  { top:  5px; }
 
+/* ══════════════════════════════════════════════════════════
+   26. CA TASK DASHBOARD (OPERATIONS VIEW)
+══════════════════════════════════════════════════════════ */
+
+/* Stats bar */
+.ops-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ops-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  text-align: center;
+}
+.ops-stat-alert { border-top: 3px solid #C0392B; }
+.ops-stat-warn  { border-top: 3px solid #B8923C; }
+.ops-stat-ok    { border-top: 3px solid #3A7A3A; }
+.ops-stat-val   { font-size: 24px; font-weight: 700; color: var(--primary); line-height: 1; }
+.ops-stat-alert .ops-stat-val { color: #C0392B; }
+.ops-stat-warn  .ops-stat-val { color: #B8923C; }
+.ops-stat-ok    .ops-stat-val { color: #3A7A3A; }
+.ops-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+
+/* View toggle */
+.ops-view-toggle { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 3px; }
+.ops-view-btn { padding: 6px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-muted); }
+.ops-view-btn.active { background: var(--primary); color: #fff; }
+
+/* Filter bar */
+.ops-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ops-filter-sel {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  min-width: 140px;
+}
+.ops-add-btn {
+  margin-left: auto;
+  padding: 7px 16px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ops-add-btn:hover { background: #1E4A78; }
+
+/* Kanban board */
+.ops-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.ops-board-col {
+  background: #F8F6F2;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  min-height: 200px;
+}
+.ops-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--r-md) var(--r-md) 0 0;
+}
+.ops-col-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.ops-col-count { font-size: 12px; background: var(--border); color: var(--text-muted); padding: 2px 8px; border-radius: 12px; }
+.ops-col-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.ops-empty-col { padding: 20px; text-align: center; color: var(--text-muted); font-size: 12px; }
+
+/* Task card */
+.ops-task-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .1s;
+}
+.ops-task-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.1); transform: translateY(-1px); }
+.ops-task-card.overdue { border-left: 3px solid #C0392B; }
+.ops-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.ops-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ops-card-type { font-size: 11px; color: var(--text-muted); flex: 1; }
+.ops-priority-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.ops-card-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; margin-bottom: 3px; }
+.ops-card-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+.ops-card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ops-card-client { font-size: 11px; color: var(--primary); font-weight: 600; }
+.ops-card-assignee { font-size: 11px; color: var(--text-muted); }
+.ops-card-due { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+.ops-card-due.overdue-text { color: #C0392B; font-weight: 600; }
+.ops-card-notes { margin-top: 6px; font-size: 11px; color: var(--text-muted); line-height: 1.4; border-top: 1px solid var(--border); padding-top: 6px; }
+
+/* Reports section */
+.ops-reports { display: flex; flex-direction: column; gap: 16px; }
+
+/* Page header row with view toggle */
+.page-title-row { display: flex; justify-content: space-between; align-items: flex-start; }
+
 /* Sidebar overlay backdrop */
 .sidebar-backdrop {
   display: none;
