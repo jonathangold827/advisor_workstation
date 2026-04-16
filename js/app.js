@@ -497,8 +497,9 @@ let caTasks = [
 
 let caTasksNextId = 31;
 
-let opsView = 'family'; // 'family' | 'type' | 'staff'
-let opsFilters = { assignee: 'all', client: 'all', type: 'all', status: 'all' };
+let opsView = 'action'; // 'action' | 'family' | 'type' | 'staff'
+let opsFilters = { assignee: 'all', status: 'all' };
+let opsSelectedTask = null;
 let showNewTaskModal = false;
 let newTaskDraft = { clientId: '', type: 'cash', subType: '', title: '', assignedTo: '', priority: 'medium', dueDate: '', estHours: '', recurring: false, notes: '' };
 
@@ -2130,10 +2131,468 @@ const STATUS_META = {
   completed:        { label: 'Completed',       color: '#3A7A3A' },
 };
 const PRIORITY_META = {
-  high:   { label: 'High',   color: '#C0392B' },
-  medium: { label: 'Med',    color: '#B8923C' },
-  low:    { label: 'Low',    color: '#5A7A5A' }
+  high:   { label: 'High', color: '#C0392B' },
+  medium: { label: 'Med',  color: '#B8923C' },
+  low:    { label: 'Low',  color: '#5A7A5A' }
 };
+
+// ── Task helpers ──────────────────────────────────────────
+function opsClientName(id) { const c = clients.find(x => x.id === id); return c ? c.displayName : 'Unknown'; }
+function opsStaffName(id)  { const s = CA_STAFF.find(x => x.id === id); return s ? s.name : id; }
+function opsInitials(id)   { const s = CA_STAFF.find(x => x.id === id); return s ? s.initials : '??'; }
+
+// ── Mutations + partial refresh ───────────────────────────
+function updateTask(taskId, changes) {
+  const task = caTasks.find(t => t.id === taskId);
+  if (!task) return;
+  Object.assign(task, changes);
+  refreshOpsView();
+  // If detail panel is open on this task, refresh it
+  if (opsSelectedTask === taskId) {
+    const p = document.getElementById('ops-task-panel');
+    if (p) { p.innerHTML = renderTaskPanelContent(taskId); wireTaskPanel(); }
+  }
+}
+
+function refreshOpsView() {
+  if (state.view !== 'operations') return;
+  const main = document.querySelector('.main-area');
+  if (!main) return;
+  main.innerHTML = renderOperationsView();
+  wireOpsSelects();
+  if (showNewTaskModal) wireNewTaskModal();
+}
+
+function wireOpsSelects() {
+  document.querySelectorAll('[data-ops-filter]').forEach(sel => {
+    sel.addEventListener('change', e => {
+      opsFilters[e.target.getAttribute('data-ops-filter')] = e.target.value;
+      refreshOpsView();
+    });
+  });
+}
+
+// ── Task detail panel ─────────────────────────────────────
+function initTaskPanel() {
+  if (document.getElementById('ops-task-panel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'ops-task-panel';
+  panel.className = 'ops-task-panel';
+  document.body.appendChild(panel);
+  const bd = document.createElement('div');
+  bd.id = 'ops-panel-backdrop';
+  bd.className = 'ops-panel-backdrop';
+  bd.addEventListener('click', closeTaskPanel);
+  document.body.appendChild(bd);
+}
+
+function openTaskPanel(taskId) {
+  opsSelectedTask = taskId;
+  initTaskPanel();
+  const panel = document.getElementById('ops-task-panel');
+  const bd    = document.getElementById('ops-panel-backdrop');
+  panel.innerHTML = renderTaskPanelContent(taskId);
+  panel.classList.add('open');
+  bd.classList.add('open');
+  wireTaskPanel();
+}
+
+function closeTaskPanel() {
+  opsSelectedTask = null;
+  const p = document.getElementById('ops-task-panel');
+  const b = document.getElementById('ops-panel-backdrop');
+  if (p) p.classList.remove('open');
+  if (b) b.classList.remove('open');
+}
+
+function wireTaskPanel() {
+  const panel = document.getElementById('ops-task-panel');
+  if (!panel) return;
+  const form = panel.querySelector('#task-note-form');
+  if (form) {
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const inp = panel.querySelector('#task-note-input');
+      if (!inp?.value.trim()) return;
+      const task = caTasks.find(t => t.id === opsSelectedTask);
+      if (!task) return;
+      const note = `[${TODAY}] ${inp.value.trim()}`;
+      task.notes = task.notes ? task.notes + '\n' + note : note;
+      inp.value = '';
+      panel.innerHTML = renderTaskPanelContent(opsSelectedTask);
+      wireTaskPanel();
+    });
+  }
+  panel.querySelector('[data-tp-assign]')?.addEventListener('change', e => {
+    updateTask(opsSelectedTask, { assignedTo: e.target.value });
+  });
+  panel.querySelector('[data-tp-due]')?.addEventListener('change', e => {
+    updateTask(opsSelectedTask, { dueDate: e.target.value });
+  });
+}
+
+function renderTaskPanelContent(taskId) {
+  const task = caTasks.find(t => t.id === taskId);
+  if (!task) return '<div style="padding:24px;color:var(--text-muted)">Task not found.</div>';
+  const sm     = STATUS_META[task.status] || STATUS_META.pending;
+  const pm     = PRIORITY_META[task.priority] || PRIORITY_META.medium;
+  const tm     = CA_TASK_TYPES[task.type] || CA_TASK_TYPES.general;
+  const client = clients.find(c => c.id === task.clientId);
+  const isOver = task.status !== 'completed' && task.dueDate < TODAY;
+  const isDone = task.status === 'completed';
+  const daysOver = isOver ? Math.round((new Date(TODAY) - new Date(task.dueDate)) / 86400000) : 0;
+
+  const statusBtns = Object.entries(STATUS_META).map(([k, v]) =>
+    `<button class="tp-status-btn${task.status===k?' active':''}"
+       data-task-set-status="${taskId}:${k}"
+       style="${task.status===k?`background:${v.color};color:#fff;border-color:${v.color}`:''}">
+       ${v.label}</button>`
+  ).join('');
+
+  const noteLines = task.notes ? task.notes.split('\n').filter(Boolean) : [];
+  const notesHtml = noteLines.length
+    ? noteLines.slice().reverse().map(n => {
+        const m = n.match(/^\[(\d{4}-\d{2}-\d{2})\] (.+)$/);
+        return m
+          ? `<div class="tp-note-entry"><span class="tp-note-date">${m[1]}</span><span class="tp-note-text">${m[2]}</span></div>`
+          : `<div class="tp-note-entry"><span class="tp-note-text">${n}</span></div>`;
+      }).join('')
+    : '<div class="tp-note-empty">No notes yet — log context, blockers, or follow-ups here.</div>';
+
+  const assignOpts = CA_STAFF.map(s =>
+    `<option value="${s.id}"${task.assignedTo===s.id?' selected':''}>${s.name} (${s.role})</option>`
+  ).join('');
+
+  return `
+  <div class="tp-header">
+    <div class="tp-hdr-top">
+      <span class="tp-type-badge" style="background:${tm.color}22;color:${tm.color}">${tm.label}</span>
+      <button class="tp-close-btn" data-task-panel-close title="Close">✕</button>
+    </div>
+    <div class="tp-title">${task.title}</div>
+    <div class="tp-sub-row">
+      <span class="tp-sub-text">${task.subType}</span>
+      ${task.recurring ? '<span class="tp-recurring-badge">↻ Recurring</span>' : ''}
+      ${isDone ? `<span class="tp-done-badge">✓ Completed ${task.completedDate}</span>` : ''}
+    </div>
+  </div>
+  <div class="tp-body">
+    <div class="tp-section">
+      <div class="tp-section-label">Status</div>
+      <div class="tp-status-bar">${statusBtns}</div>
+    </div>
+
+    ${isOver ? `<div class="tp-alert-banner">⚠ Overdue by ${daysOver} day${daysOver!==1?'s':''} &mdash; action required</div>` : ''}
+
+    <div class="tp-meta-grid">
+      <div class="tp-meta-item">
+        <div class="tp-meta-label">Client</div>
+        <div class="tp-meta-val">${client ? client.displayName : '—'}</div>
+      </div>
+      <div class="tp-meta-item">
+        <div class="tp-meta-label">Priority</div>
+        <div class="tp-meta-val" style="color:${pm.color};font-weight:700">${pm.label}</div>
+      </div>
+      <div class="tp-meta-item">
+        <div class="tp-meta-label">Due Date</div>
+        <div class="tp-meta-val">
+          <input type="date" class="tp-date-edit${isOver?' tp-date-overdue':''}" value="${task.dueDate}" data-tp-due>
+        </div>
+      </div>
+      <div class="tp-meta-item">
+        <div class="tp-meta-label">Est. Hours</div>
+        <div class="tp-meta-val">${task.estHours ? task.estHours+'h' : '—'}${task.actHours ? ` / ${task.actHours}h actual` : ''}</div>
+      </div>
+      <div class="tp-meta-item tp-meta-full">
+        <div class="tp-meta-label">Assigned To</div>
+        <div class="tp-meta-val"><select class="tp-select-edit" data-tp-assign>${assignOpts}</select></div>
+      </div>
+    </div>
+
+    <div class="tp-section">
+      <div class="tp-section-label">Notes &amp; Activity</div>
+      <div class="tp-notes-list">${notesHtml}</div>
+      <form id="task-note-form" class="tp-note-form">
+        <input id="task-note-input" class="tp-note-input" type="text"
+               placeholder="Add a note, update, or blocker…" autocomplete="off">
+        <button type="submit" class="tp-note-submit">Log</button>
+      </form>
+    </div>
+
+    <div class="tp-quick-actions">
+      ${!isDone ? `<button class="tp-act-primary" data-task-set-status="${taskId}:completed">✓ Mark Complete</button>` : ''}
+      ${task.status === 'awaiting_client' ? `<button class="tp-act-secondary" data-task-log-followup="${taskId}">📞 Log Follow-up</button>` : ''}
+      ${task.status === 'pending' ? `<button class="tp-act-secondary" data-task-set-status="${taskId}:in_progress">▶ Start Task</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// ── Needs Action view ─────────────────────────────────────
+function renderNeedsActionView() {
+  // Apply staff filter; status filter ignored (we bucket by urgency)
+  const open = caTasks.filter(t => t.status !== 'completed');
+  const pool = opsFilters.assignee === 'all' ? open : open.filter(t => t.assignedTo === opsFilters.assignee);
+
+  const overdue  = pool.filter(t => t.dueDate < TODAY).sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+  const dueToday = pool.filter(t => t.dueDate === TODAY);
+  const awaiting = pool.filter(t => t.status === 'awaiting_client' && !overdue.includes(t) && !dueToday.includes(t))
+                       .sort((a,b) => a.createdDate.localeCompare(b.createdDate));
+  const active   = pool.filter(t => t.status === 'in_progress' && !overdue.includes(t) && !dueToday.includes(t));
+  const highPend = pool.filter(t => t.priority === 'high' && t.status === 'pending'
+                                  && !overdue.includes(t) && !dueToday.includes(t));
+
+  if (!overdue.length && !dueToday.length && !awaiting.length && !active.length && !highPend.length) {
+    return `<div class="ops-all-clear">
+      <div class="ops-ac-icon">✓</div>
+      <div class="ops-ac-title">All clear — nothing urgent right now</div>
+      <div class="ops-ac-sub">Switch to By Family or By Task Type to review all tasks</div>
+    </div>`;
+  }
+
+  function actionCard(t, group) {
+    const tm  = CA_TASK_TYPES[t.type] || CA_TASK_TYPES.general;
+    const pm  = PRIORITY_META[t.priority] || PRIORITY_META.medium;
+    const cli = clients.find(c => c.id === t.clientId);
+    const stf = CA_STAFF.find(s => s.id === t.assignedTo);
+    const daysDiff = Math.round((new Date(TODAY) - new Date(t.dueDate)) / 86400000);
+    const daysPending = Math.round((new Date(TODAY) - new Date(t.createdDate)) / 86400000);
+
+    const urgencyMap = {
+      overdue:  { label: `Overdue ${daysDiff} day${daysDiff!==1?'s':''}`,  cls: 'ac-urg-overdue'  },
+      today:    { label: 'Due today',                                        cls: 'ac-urg-today'    },
+      awaiting: { label: `Awaiting ${daysPending} day${daysPending!==1?'s':''}`, cls: 'ac-urg-await' },
+      active:   { label: `In progress · due ${t.dueDate}`,                  cls: 'ac-urg-active'   },
+      high:     { label: `High priority · pending`,                          cls: 'ac-urg-high'     },
+    };
+    const urg = urgencyMap[group];
+
+    const btns = [];
+    if (t.status === 'pending')          btns.push(`<button class="ac-btn ac-btn-start"   data-task-set-status="${t.id}:in_progress">▶ Start</button>`);
+    if (t.status === 'awaiting_client')  btns.push(`<button class="ac-btn ac-btn-followup" data-task-log-followup="${t.id}">📞 Log Follow-up</button>`);
+    btns.push(`<button class="ac-btn ac-btn-done" data-task-set-status="${t.id}:completed">✓ Done</button>`);
+    btns.push(`<button class="ac-btn ac-btn-open" data-task-open="${t.id}">Detail →</button>`);
+
+    return `
+    <div class="ac-card ${urg.cls}" data-task-id="${t.id}">
+      <div class="ac-card-body">
+        <div class="ac-urg-tag ${urg.cls}">${urg.label}</div>
+        <div class="ac-title">${t.title}</div>
+        <div class="ac-meta">
+          <span class="ac-meta-client">${cli ? cli.displayName.split(' ')[1] : '?'}</span>
+          <span class="ac-dot">·</span>
+          <span style="color:${tm.color};font-size:12px">${tm.label} · ${t.subType}</span>
+          <span class="ac-dot">·</span>
+          <span class="ac-meta-staff">${stf ? stf.name.split(' ')[0] : t.assignedTo}</span>
+          <span class="ac-meta-pri" style="color:${pm.color}"> · ${pm.label}</span>
+        </div>
+      </div>
+      <div class="ac-card-actions">${btns.join('')}</div>
+    </div>`;
+  }
+
+  function acSection(title, color, items, group) {
+    if (!items.length) return '';
+    return `
+    <div class="ops-ac-section">
+      <div class="ops-ac-section-hdr" style="color:${color}">
+        <span class="ops-ac-dot" style="background:${color}"></span>${title}
+        <span class="ops-ac-count">${items.length}</span>
+      </div>
+      <div class="ops-ac-cards">${items.map(t => actionCard(t, group)).join('')}</div>
+    </div>`;
+  }
+
+  return `<div class="ops-needs-action">
+    ${acSection('Overdue',                   '#C0392B', overdue,  'overdue')}
+    ${acSection('Due Today',                 '#E67E22', dueToday, 'today')}
+    ${acSection('Awaiting Client Response',  '#B8923C', awaiting, 'awaiting')}
+    ${acSection('In Progress',               '#1E4A78', active,   'active')}
+    ${acSection('High Priority — Not Started','#8B5CF6', highPend, 'high')}
+  </div>`;
+}
+
+// ── New Task Modal ─────────────────────────────────────────
+function renderNewTaskModal() {
+  const typeKey = newTaskDraft.type || 'cash';
+  const subs    = CA_TASK_TYPES[typeKey]?.subTypes || [];
+  return `
+  <div class="modal-overlay" id="new-task-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title">New Task</span>
+        <button class="modal-close" data-modal-cancel>✕</button>
+      </div>
+      <form id="new-task-form" class="modal-form">
+        <div class="modal-row">
+          <label class="modal-field">Client <span class="modal-req">*</span>
+            <select name="clientId" class="modal-input" required>
+              <option value="">Select client…</option>
+              ${clients.map(c => `<option value="${c.id}"${newTaskDraft.clientId==c.id?' selected':''}>${c.displayName}</option>`).join('')}
+            </select>
+          </label>
+          <label class="modal-field">Task Type <span class="modal-req">*</span>
+            <select name="type" class="modal-input" id="nt-type" required>
+              ${Object.entries(CA_TASK_TYPES).map(([k,v]) => `<option value="${k}"${typeKey===k?' selected':''}>${v.label}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <div class="modal-row">
+          <label class="modal-field">Sub-type <span class="modal-req">*</span>
+            <select name="subType" class="modal-input" id="nt-subtype" required>
+              ${subs.map(s => `<option value="${s}"${newTaskDraft.subType===s?' selected':''}>${s}</option>`).join('')}
+            </select>
+          </label>
+          <label class="modal-field">Priority
+            <select name="priority" class="modal-input">
+              <option value="high"${newTaskDraft.priority==='high'?' selected':''}>High</option>
+              <option value="medium"${newTaskDraft.priority!=='high'&&newTaskDraft.priority!=='low'?' selected':''}>Medium</option>
+              <option value="low"${newTaskDraft.priority==='low'?' selected':''}>Low</option>
+            </select>
+          </label>
+        </div>
+        <label class="modal-field modal-field-full">Title <span class="modal-req">*</span>
+          <input name="title" type="text" class="modal-input" id="nt-title" required
+                 value="${newTaskDraft.title||''}" placeholder="Describe the task…">
+        </label>
+        <div class="modal-row">
+          <label class="modal-field">Assign To <span class="modal-req">*</span>
+            <select name="assignedTo" class="modal-input" required>
+              <option value="">Select staff…</option>
+              ${CA_STAFF.map(s => `<option value="${s.id}"${newTaskDraft.assignedTo===s.id?' selected':''}>${s.name} (${s.role})</option>`).join('')}
+            </select>
+          </label>
+          <label class="modal-field">Due Date <span class="modal-req">*</span>
+            <input name="dueDate" type="date" class="modal-input" required value="${newTaskDraft.dueDate||''}">
+          </label>
+        </div>
+        <div class="modal-row">
+          <label class="modal-field">Est. Hours
+            <input name="estHours" type="number" min="0.1" step="0.5" class="modal-input"
+                   placeholder="e.g. 1.5" value="${newTaskDraft.estHours||''}">
+          </label>
+          <label class="modal-field modal-field-check">
+            <input name="recurring" type="checkbox" ${newTaskDraft.recurring?'checked':''}>
+            Recurring task
+          </label>
+        </div>
+        <label class="modal-field modal-field-full">Notes
+          <textarea name="notes" class="modal-input modal-textarea"
+                    placeholder="Context, instructions, or dependencies…">${newTaskDraft.notes||''}</textarea>
+        </label>
+        <div class="modal-footer">
+          <button type="button" class="modal-btn-cancel" data-modal-cancel>Cancel</button>
+          <button type="submit" class="modal-btn-submit">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+
+function wireNewTaskModal() {
+  const overlay       = document.getElementById('new-task-overlay');
+  if (!overlay) return;
+  const typeSelect    = overlay.querySelector('#nt-type');
+  const subTypeSelect = overlay.querySelector('#nt-subtype');
+  const titleInput    = overlay.querySelector('#nt-title');
+  const clientSelect  = overlay.querySelector('[name="clientId"]');
+
+  function autoFillTitle() {
+    if (titleInput.dataset.edited) return;
+    const client = clients.find(c => c.id === parseInt(clientSelect?.value));
+    const lastName = client ? client.displayName.split(' ')[1] : '';
+    const sub = subTypeSelect?.value || '';
+    if (sub) titleInput.value = lastName ? `${sub} — ${lastName}` : sub;
+  }
+
+  typeSelect?.addEventListener('change', e => {
+    const subs = CA_TASK_TYPES[e.target.value]?.subTypes || [];
+    subTypeSelect.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    autoFillTitle();
+  });
+  subTypeSelect?.addEventListener('change', autoFillTitle);
+  clientSelect?.addEventListener('change',  autoFillTitle);
+  titleInput?.addEventListener('input', () => { titleInput.dataset.edited = '1'; });
+
+  overlay.querySelector('#new-task-form')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const data = new FormData(e.target);
+    const clientId = parseInt(data.get('clientId'));
+    const cliName  = clients.find(c => c.id === clientId)?.displayName.split(' ')[1] || '';
+    caTasks.push({
+      id:            `cat${String(caTasksNextId).padStart(3, '0')}`,
+      clientId,
+      type:          data.get('type'),
+      subType:       data.get('subType'),
+      title:         data.get('title') || `${data.get('subType')} — ${cliName}`,
+      assignedTo:    data.get('assignedTo'),
+      priority:      data.get('priority'),
+      status:        'pending',
+      createdDate:   TODAY,
+      dueDate:       data.get('dueDate'),
+      completedDate: null,
+      estHours:      parseFloat(data.get('estHours')) || null,
+      actHours:      null,
+      recurring:     data.has('recurring'),
+      notes:         data.get('notes') || ''
+    });
+    caTasksNextId++;
+    showNewTaskModal = false;
+    newTaskDraft = { clientId:'', type:'cash', subType:'', title:'', assignedTo:'', priority:'medium', dueDate:'', estHours:'', recurring:false, notes:'' };
+    refreshOpsView();
+  });
+
+  overlay.querySelectorAll('[data-modal-cancel]').forEach(btn => {
+    btn.addEventListener('click', () => { showNewTaskModal = false; refreshOpsView(); });
+  });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) { showNewTaskModal = false; refreshOpsView(); }
+  });
+}
+
+// ── Global task event listener ─────────────────────────────
+function attachGlobalTaskListeners() {
+  document.body.addEventListener('click', e => {
+    if (e.target.closest('[data-task-panel-close]')) { closeTaskPanel(); return; }
+
+    const openBtn = e.target.closest('[data-task-open]');
+    if (openBtn) { openTaskPanel(openBtn.getAttribute('data-task-open')); return; }
+
+    const statusBtn = e.target.closest('[data-task-set-status]');
+    if (statusBtn) {
+      const [taskId, newStatus] = statusBtn.getAttribute('data-task-set-status').split(':');
+      const changes = { status: newStatus };
+      if (newStatus === 'completed') changes.completedDate = TODAY;
+      updateTask(taskId, changes);
+      return;
+    }
+
+    const followupBtn = e.target.closest('[data-task-log-followup]');
+    if (followupBtn) {
+      const taskId = followupBtn.getAttribute('data-task-log-followup');
+      const task = caTasks.find(t => t.id === taskId);
+      if (task) {
+        const stf  = CA_STAFF.find(s => s.id === task.assignedTo);
+        const note = `[${TODAY}] Follow-up attempted (${stf ? stf.initials : '?'})`;
+        updateTask(taskId, { notes: task.notes ? task.notes + '\n' + note : note });
+      }
+      return;
+    }
+
+    // Click task row body (not a button) → open detail
+    const row = e.target.closest('.ops-task-row[data-task-id]');
+    if (row && !e.target.closest('button') && !e.target.closest('select') && !e.target.closest('input')) {
+      openTaskPanel(row.getAttribute('data-task-id'));
+      return;
+    }
+
+    // Click action card body (not a button) → open detail
+    const card = e.target.closest('.ac-card[data-task-id]');
+    if (card && !e.target.closest('button')) {
+      openTaskPanel(card.getAttribute('data-task-id'));
+      return;
+    }
+  });
+}
 
 function renderOperationsView() {
   // ── Filtered task list ────────────────────────────────
@@ -2158,10 +2617,6 @@ function renderOperationsView() {
   const done     = allTasks.filter(t => t.status === 'completed').length;
   const awaiting = allTasks.filter(t => t.status === 'awaiting_client').length;
 
-  function clientName(id) { const c = clients.find(x => x.id === id); return c ? c.displayName : 'Unknown'; }
-  function staffInitials(id) { const s = CA_STAFF.find(x => x.id === id); return s ? s.initials : '??'; }
-  function staffName(id)  { const s = CA_STAFF.find(x => x.id === id); return s ? s.name : id; }
-
   // ── Compact task row ──────────────────────────────────
   function taskRow(t, showClient, showType) {
     const sm      = STATUS_META[t.status] || STATUS_META.pending;
@@ -2179,9 +2634,9 @@ function renderOperationsView() {
         <span class="ops-row-sub">${t.subType}</span>
       </td>
       ${showType  ? `<td class="ops-row-type"><span class="ops-type-chip" style="border-color:${tm.color};color:${tm.color}">${tm.label}</span></td>` : ''}
-      ${showClient? `<td class="ops-row-client">${clientName(t.clientId).split(' ')[1]}</td>` : ''}
+      ${showClient? `<td class="ops-row-client">${opsClientName(t.clientId).split(' ')[1]}</td>` : ''}
       <td class="ops-row-assignee">
-        <span class="ops-avatar-chip" title="${staffName(t.assignedTo)}">${staffInitials(t.assignedTo)}</span>
+        <span class="ops-avatar-chip" title="${opsStaffName(t.assignedTo)}">${opsInitials(t.assignedTo)}</span>
       </td>
       <td class="ops-row-due${isOver ? ' overdue-text' : ''}">
         ${isDone ? '<span style="color:var(--text-muted)">Done</span>' : t.dueDate}
@@ -2189,6 +2644,10 @@ function renderOperationsView() {
       </td>
       <td class="ops-row-priority">
         <span class="ops-pri-dot" style="background:${pm.color}" title="${pm.label}"></span>
+      </td>
+      <td class="ops-row-actions">
+        ${!isDone ? `<button class="ops-row-btn ops-row-btn-done" data-task-set-status="${t.id}:completed" title="Mark complete">✓</button>` : ''}
+        <button class="ops-row-btn ops-row-btn-open" data-task-open="${t.id}" title="Open detail">→</button>
       </td>
     </tr>`;
   }
@@ -2213,35 +2672,35 @@ function renderOperationsView() {
   // ── Build grouped content ─────────────────────────────
   let groupedContent = '';
 
-  if (opsView === 'family') {
+  if (opsView === 'action') {
+    groupedContent = renderNeedsActionView();
+  } else if (opsView === 'family') {
     clients.forEach(c => {
       const gt = tasks.filter(t => t.clientId === c.id);
       if (!gt.length) return;
       groupedContent += groupHeader(c.displayName, '#0C2340', gt);
       groupedContent += `<table class="ops-task-table">
-        <thead><tr><th></th><th>Task</th><th>Assigned</th><th>Due</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Task</th><th>Type / Sub-type</th><th>Assigned</th><th>Due</th><th></th><th></th></tr></thead>
         <tbody>${gt.map(t => taskRow(t, false, true)).join('')}</tbody>
       </table>`;
     });
-
   } else if (opsView === 'type') {
     Object.entries(CA_TASK_TYPES).forEach(([key, tm]) => {
       const gt = tasks.filter(t => t.type === key);
       if (!gt.length) return;
       groupedContent += groupHeader(tm.label, tm.color, gt);
       groupedContent += `<table class="ops-task-table">
-        <thead><tr><th></th><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th></th><th></th></tr></thead>
         <tbody>${gt.map(t => taskRow(t, true, false)).join('')}</tbody>
       </table>`;
     });
-
   } else {
-    // Staff view
     groupedContent = renderOpsStaff(tasks);
   }
 
   const viewToggle = `
   <div class="ops-view-toggle">
+    <button class="ops-view-btn${opsView==='action'?' active':''}" data-ops-view="action">Needs Action</button>
     <button class="ops-view-btn${opsView==='family'?' active':''}" data-ops-view="family">By Family</button>
     <button class="ops-view-btn${opsView==='type'?' active':''}" data-ops-view="type">By Task Type</button>
     <button class="ops-view-btn${opsView==='staff'?' active':''}" data-ops-view="staff">By Staff</button>
@@ -2281,7 +2740,8 @@ function renderOperationsView() {
     <div class="ops-groups">
       ${groupedContent || '<div class="ops-empty">No tasks match the current filters.</div>'}
     </div>
-  </div>`;
+  </div>
+  ${showNewTaskModal ? renderNewTaskModal() : ''}`;
 }
 
 function renderOpsStaff(tasks) {
@@ -2318,7 +2778,7 @@ function renderOpsStaff(tasks) {
           const tm = CA_TASK_TYPES[t.type] || CA_TASK_TYPES.general;
           const isOver = t.status !== 'completed' && t.dueDate < TODAY;
           const isDone = t.status === 'completed';
-          const cname  = (clients.find(x => x.id === t.clientId) || {displayName:'Unknown'}).displayName.split(' ')[1];
+          const cname  = opsClientName(t.clientId).split(' ')[1];
           return `<tr class="ops-task-row${isOver?' ops-row-overdue':''}${isDone?' ops-row-done':''}" data-task-id="${t.id}">
             <td class="ops-row-status"><span class="ops-status-dot" style="background:${sm.color}" title="${sm.label}"></span></td>
             <td class="ops-row-title"><span class="ops-row-task-title">${t.title}</span><span class="ops-row-sub">${t.subType}</span></td>
@@ -2326,6 +2786,10 @@ function renderOpsStaff(tasks) {
             <td class="ops-row-client">${cname}</td>
             <td class="ops-row-due${isOver?' overdue-text':''}">${isDone?'<span style="color:var(--text-muted)">Done</span>':t.dueDate}${isOver?'<span class="ops-overdue-flag">!</span>':''}</td>
             <td class="ops-row-priority"><span class="ops-pri-dot" style="background:${pm.color}" title="${pm.label}"></span></td>
+            <td class="ops-row-actions">
+              ${!isDone?`<button class="ops-row-btn ops-row-btn-done" data-task-set-status="${t.id}:completed" title="Mark complete">✓</button>`:''}
+              <button class="ops-row-btn ops-row-btn-open" data-task-open="${t.id}" title="Open detail">→</button>
+            </td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
@@ -2484,28 +2948,22 @@ function attachEventListeners() {
       renderApp(); return;
     }
 
-    // Ops view toggle (Task Board / Reports)
+    // Ops view toggle
     const opsViewBtn = e.target.closest('[data-ops-view]');
     if (opsViewBtn) {
       opsView = opsViewBtn.getAttribute('data-ops-view');
-      renderApp(); return;
+      refreshOpsView(); return;
     }
 
     // Ops new task button
     if (e.target.closest('[data-ops-new-task]')) {
       showNewTaskModal = true;
-      renderApp(); return;
+      refreshOpsView(); return;
     }
   });
 
   // Ops filter selects
-  document.querySelectorAll('[data-ops-filter]').forEach(sel => {
-    sel.addEventListener('change', e => {
-      const key = e.target.getAttribute('data-ops-filter');
-      opsFilters[key] = e.target.value;
-      renderApp();
-    });
-  });
+  wireOpsSelects();
 
   // Sort
   const sortSel = document.getElementById('sort-select');
@@ -2535,6 +2993,8 @@ function init() {
   parseRoute();
   renderApp();
   initChat();
+  initTaskPanel();
+  attachGlobalTaskListeners();
 }
 
 document.addEventListener('DOMContentLoaded', init);
