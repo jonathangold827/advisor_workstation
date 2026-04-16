@@ -498,6 +498,7 @@ let caTasks = [
 let caTasksNextId = 31;
 
 let opsView = 'action'; // 'action' | 'family' | 'type' | 'staff'
+let reportsTab = 'overview'; // 'overview' | 'relationship' | 'engagement' | 'profitability' | 'staffing'
 let opsFilters = { assignee: 'all', status: 'all' };
 let opsSelectedTask = null;
 let showNewTaskModal = false;
@@ -849,12 +850,154 @@ function renderTasksView() {
 }
 
 // ─── REPORTS VIEW ─────────────────────────────────────────
+
+// ── Report helpers ────────────────────────────────────────
+function rScoreColor(s) { return s >= 8 ? '#2D7A2D' : s >= 6.5 ? '#B8923C' : '#C0392B'; }
+function rScoreBg(s)    { return s >= 8 ? '#EDF7ED' : s >= 6.5 ? '#FDF6EC' : '#FDF0EE'; }
+function rScoreChip(s, title='') {
+  return `<span class="r-score-chip" style="background:${rScoreBg(s)};color:${rScoreColor(s)}" title="${title}">${(+s).toFixed(1)}</span>`;
+}
+function rBar(pct, color='var(--primary)') {
+  return `<div class="r-bar-track"><div class="r-bar-fill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${color}"></div></div>`;
+}
+function rInsight(label, value, sub='', color='var(--primary)') {
+  return `<div class="r-insight-card">
+    <div class="r-ic-label">${label}</div>
+    <div class="r-ic-value" style="color:${color}">${value}</div>
+    ${sub ? `<div class="r-ic-sub">${sub}</div>` : ''}
+  </div>`;
+}
+
 function renderReportsView() {
-  const totalAUM   = clients.reduce((s, c) => s + c.aum, 0);
-  const totalRev   = clients.reduce((s, c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0);
-  const totalLTV   = clients.reduce((s, c) => s + c.ltvMetrics.projectedLTV, 0);
-  const totalRefs  = clients.reduce((s, c) => s + c.ltvMetrics.referralsGiven, 0);
-  const avgHealth  = (clients.reduce((s, c) => s + c.healthScore, 0) / clients.length).toFixed(1);
+  const subNav = `
+  <div class="reports-sub-nav">
+    <button class="rsn-btn${reportsTab==='overview'?' active':''}"      data-report-tab="overview">Overview</button>
+    <button class="rsn-btn${reportsTab==='relationship'?' active':''}"  data-report-tab="relationship">Relationship Value</button>
+    <button class="rsn-btn${reportsTab==='engagement'?' active':''}"    data-report-tab="engagement">Engagement</button>
+    <button class="rsn-btn${reportsTab==='profitability'?' active':''}" data-report-tab="profitability">Profitability</button>
+    <button class="rsn-btn${reportsTab==='staffing'?' active':''}"      data-report-tab="staffing">Staffing &amp; Capacity</button>
+  </div>`;
+
+  const tabFns = {
+    overview:      renderRptOverview,
+    relationship:  renderRptRelationship,
+    engagement:    renderRptEngagement,
+    profitability: renderRptProfitability,
+    staffing:      renderRptStaffing
+  };
+  const content = (tabFns[reportsTab] || renderRptOverview)();
+
+  return `
+  <div class="main-header">
+    ${menuBtn}
+    <div class="header-title">Reports</div>
+    <div class="header-spacer"></div>
+    <div class="header-avatar">${advisor.initials}</div>
+  </div>
+  <div class="main-content">
+    ${subNav}
+    ${content}
+  </div>`;
+}
+
+// ── Tab 1: Overview ───────────────────────────────────────
+function renderRptOverview() {
+  const totalAUM  = clients.reduce((s, c) => s + c.aum, 0);
+  const totalRev  = clients.reduce((s, c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0);
+  const totalLTV  = clients.reduce((s, c) => s + c.ltvMetrics.projectedLTV, 0);
+  const totalRefs = clients.reduce((s, c) => s + c.ltvMetrics.referralsGiven, 0);
+  const avgHealth = (clients.reduce((s, c) => s + c.healthScore, 0) / clients.length).toFixed(1);
+
+  // Revenue concentration
+  const sorted = [...clients].sort((a,b) => b.ltvMetrics.estimatedAnnualRevenue - a.ltvMetrics.estimatedAnnualRevenue);
+  const top2Rev = sorted.slice(0,2).reduce((s,c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0);
+  const concPct = ((top2Rev / totalRev) * 100).toFixed(0);
+
+  // LTV at-risk (at-risk clients)
+  const atRisk = clients.filter(c => c.healthLabel === 'At Risk');
+  const ltvAtRisk = atRisk.reduce((s,c) => s + c.ltvMetrics.projectedLTV, 0);
+
+  const byTier = ['platinum','gold','silver'].map(tier => {
+    const grp = clients.filter(c => c.tier === tier);
+    return { tier, count: grp.length,
+      aum: grp.reduce((s,c) => s+c.aum, 0),
+      rev: grp.reduce((s,c) => s+c.ltvMetrics.estimatedAnnualRevenue, 0),
+      avgHealth: grp.length ? (grp.reduce((s,c) => s+c.healthScore,0)/grp.length).toFixed(1) : '—' };
+  });
+
+  const byHealth = ['Thriving','Nurture','At Risk'].map(l => ({
+    label: l, cls: l==='Thriving'?'health-thriving':l==='Nurture'?'health-nurture':'health-at-risk',
+    count: clients.filter(c => c.healthLabel === l).length
+  }));
+
+  const tpLast30 = clients.reduce((s,c) => s + c.touchpoints.filter(tp => daysSince(tp.date) <= 30).length, 0);
+  const avgContact = Math.round(clients.reduce((s,c) => s+daysSince(c.lastTouchpoint.date),0)/clients.length);
+  const overdueContact = clients.filter(c => daysSince(c.lastTouchpoint.date) > 60).length;
+
+  return `
+  <div class="r-alert-row">
+    <div class="r-alert-chip r-alert-warn">⚠ Revenue concentration: top 2 clients = ${concPct}% of annual revenue</div>
+    ${ltvAtRisk > 0 ? `<div class="r-alert-chip r-alert-risk">⚠ ${formatCurrency(ltvAtRisk)} projected LTV at-risk (${atRisk.length} client${atRisk.length!==1?'s':''})</div>` : ''}
+    ${overdueContact > 0 ? `<div class="r-alert-chip r-alert-info">${overdueContact} client${overdueContact!==1?'s':''} overdue for contact (&gt;60 days)</div>` : ''}
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-label">Total AUM</div><div class="stat-value">${formatCurrency(totalAUM)}</div><div class="stat-sub">${clients.length} relationships</div></div>
+    <div class="stat-card"><div class="stat-label">Annual Revenue</div><div class="stat-value">${formatCurrency(totalRev)}</div><div class="stat-sub">${((totalRev/totalAUM)*100).toFixed(2)}% blended fee</div></div>
+    <div class="stat-card"><div class="stat-label">Projected LTV</div><div class="stat-value">${formatCurrency(totalLTV)}</div><div class="stat-sub">${totalRefs} referrals given</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Health Score</div><div class="stat-value">${avgHealth}<span style="font-size:14px;font-weight:400;color:var(--text-muted)">/10</span></div><div class="stat-sub">across ${clients.length} clients</div></div>
+  </div>
+
+  <div class="reports-grid">
+    <div class="panel-card">
+      <div class="panel-title">AUM &amp; Revenue by Tier</div>
+      <table class="data-table">
+        <thead><tr><th>Tier</th><th>Clients</th><th style="text-align:right">AUM</th><th style="text-align:right">Revenue</th><th style="text-align:right">Avg Health</th></tr></thead>
+        <tbody>${byTier.map(r => `
+          <tr>
+            <td><span class="tier-badge ${tierClass(r.tier)}">${tierLabel(r.tier)}</span></td>
+            <td class="data-table-sub">${r.count}</td>
+            <td class="data-table-num">${formatCurrency(r.aum)}</td>
+            <td class="data-table-num">${formatCurrency(r.rev)}</td>
+            <td class="data-table-num">${rScoreChip(r.avgHealth)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">Health Distribution</div>
+      ${byHealth.map(h => `
+      <div class="report-health-row">
+        <span class="health-label-badge ${h.cls}">${h.label}</span>
+        <div class="report-bar-track"><div class="report-bar-fill ${h.cls}" style="width:${(h.count/clients.length*100).toFixed(0)}%"></div></div>
+        <span class="data-table-num" style="min-width:20px">${h.count}</span>
+      </div>`).join('')}
+      <div class="panel-title" style="margin-top:20px">Engagement</div>
+      <div class="report-stat-row"><span class="data-table-sub">Touchpoints (last 30 days)</span><span class="data-table-primary">${tpLast30}</span></div>
+      <div class="report-stat-row"><span class="data-table-sub">Avg days since last contact</span><span class="data-table-primary">${avgContact}d</span></div>
+      <div class="report-stat-row"><span class="data-table-sub">Overdue for contact (&gt;60d)</span><span class="data-table-primary ${overdueContact>0?'loss':''}">${overdueContact}</span></div>
+    </div>
+  </div>
+
+  <div class="panel-card" style="margin-top:16px;padding:0;overflow:hidden">
+    <div style="padding:16px 20px 8px"><div class="panel-title" style="margin:0">Client Summary</div></div>
+    <table class="data-table">
+      <thead><tr><th>Client</th><th>Tier</th><th style="text-align:right">AUM</th><th style="text-align:right">Revenue</th><th style="text-align:right">LTV</th><th>Health</th><th style="text-align:right">Last Contact</th></tr></thead>
+      <tbody>${sorted.map(c => `
+        <tr>
+          <td><div class="data-table-primary">${c.displayName}</div></td>
+          <td><span class="tier-badge ${tierClass(c.tier)}">${tierLabel(c.tier)}</span></td>
+          <td class="data-table-num">${formatCurrency(c.aum)}</td>
+          <td class="data-table-num">${formatCurrency(c.ltvMetrics.estimatedAnnualRevenue)}</td>
+          <td class="data-table-num">${formatCurrency(c.ltvMetrics.projectedLTV)}</td>
+          <td><span class="health-score-inline ${healthColor(c.healthScore)}">${c.healthScore} <span style="font-weight:400">${c.healthLabel}</span></span></td>
+          <td class="data-table-num data-table-sub">${daysSince(c.lastTouchpoint.date)}d ago</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
 
   const byTier = ['platinum', 'gold', 'silver'].map(tier => {
     const grp = clients.filter(c => c.tier === tier);
@@ -967,6 +1110,511 @@ function renderReportsView() {
     </div>
 
   </div>`;
+}
+
+// ── Tab 2: Relationship Value ─────────────────────────────
+function renderRptRelationship() {
+  const dims = [
+    { key: 'revenueScore',    label: 'Revenue',    tip: 'Fee rate × AUM productivity vs. potential' },
+    { key: 'engagementScore', label: 'Engagement', tip: 'Touchpoint frequency, recency, and quality' },
+    { key: 'growthScore',     label: 'Growth',     tip: 'AUM growth rate and upsell trajectory' },
+    { key: 'breadthScore',    label: 'Breadth',    tip: 'Share of wallet — services used vs. available' },
+    { key: 'tenureScore',     label: 'Tenure',     tip: 'Loyalty and relationship longevity' },
+  ];
+
+  // Book averages
+  const bookAvg = {};
+  dims.forEach(d => {
+    bookAvg[d.key] = (clients.reduce((s,c) => s + c.ltvMetrics[d.key], 0) / clients.length);
+  });
+
+  // Composite per client (simple average of 5 dims)
+  const withComposite = clients.map(c => ({
+    ...c,
+    composite: dims.reduce((s,d) => s + c.ltvMetrics[d.key], 0) / dims.length
+  })).sort((a,b) => b.composite - a.composite);
+
+  // Wallet share gap: clients with breadth < 6.5
+  const walletGaps = clients.filter(c => c.ltvMetrics.breadthScore < 6.5)
+    .sort((a,b) => a.ltvMetrics.breadthScore - b.ltvMetrics.breadthScore);
+
+  // Growth leaders
+  const growthLeaders = [...clients].sort((a,b) => b.ltvMetrics.growthScore - a.ltvMetrics.growthScore).slice(0,3);
+
+  // Risk flags: any dim < 5
+  const riskClients = clients.filter(c => dims.some(d => c.ltvMetrics[d.key] < 5));
+
+  return `
+  <div class="r-insights-row">
+    ${dims.map(d => {
+      const avg = bookAvg[d.key];
+      const best = clients.reduce((a,b) => a.ltvMetrics[d.key] > b.ltvMetrics[d.key] ? a : b);
+      return rInsight(`Avg ${d.label}`, avg.toFixed(1)+'/10',
+        `Best: ${best.displayName.split(' ')[1]} (${best.ltvMetrics[d.key]})`,
+        rScoreColor(avg));
+    }).join('')}
+  </div>
+
+  <div class="panel-card" style="margin-top:16px;padding:0;overflow:hidden">
+    <div style="padding:14px 20px 8px"><div class="panel-title" style="margin:0">Relationship Score Matrix</div></div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          ${dims.map(d => `<th style="text-align:center" title="${d.tip}">${d.label}</th>`).join('')}
+          <th style="text-align:center">Composite</th>
+          <th>Services Used</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${withComposite.map(c => `
+        <tr>
+          <td>
+            <div class="data-table-primary">${c.displayName}</div>
+            <div class="data-table-sub">${c.tier} · ${c.ltvMetrics.tenureYears}yr tenure</div>
+          </td>
+          ${dims.map(d => `<td style="text-align:center">${rScoreChip(c.ltvMetrics[d.key], d.label)}</td>`).join('')}
+          <td style="text-align:center">
+            <span class="r-composite-chip" style="background:${rScoreBg(c.composite)};color:${rScoreColor(c.composite)}">
+              ${c.composite.toFixed(1)}
+            </span>
+          </td>
+          <td><div class="r-services-list">${c.ltvMetrics.servicesUsed.map(s => `<span class="r-service-tag">${s}</span>`).join('')}</div></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="reports-grid" style="margin-top:16px">
+    <div class="panel-card">
+      <div class="panel-title">Wallet Share Gaps <span class="panel-title-sub">Breadth &lt; 6.5 — upsell opportunity</span></div>
+      ${walletGaps.length === 0 ? '<div class="r-empty">All clients scoring well on breadth.</div>' : walletGaps.map(c => `
+      <div class="r-opp-row">
+        <div>
+          <div class="data-table-primary">${c.displayName}</div>
+          <div class="data-table-sub">${c.ltvMetrics.servicesUsed.join(', ')}</div>
+        </div>
+        <div style="text-align:right">
+          ${rScoreChip(c.ltvMetrics.breadthScore, 'Breadth Score')}
+          <div class="data-table-sub" style="margin-top:4px">${c.ltvMetrics.servicesUsed.length} of 7 services</div>
+        </div>
+      </div>`).join('')}
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">Growth Leaders <span class="panel-title-sub">Highest AUM growth trajectory</span></div>
+      ${growthLeaders.map((c, i) => `
+      <div class="r-opp-row">
+        <div>
+          <div class="data-table-primary">${c.displayName}</div>
+          <div class="data-table-sub">YTD: +${(c.aumGrowthYTD*100).toFixed(1)}% · ${formatCurrency(c.aum)} AUM</div>
+        </div>
+        ${rScoreChip(c.ltvMetrics.growthScore, 'Growth Score')}
+      </div>`).join('')}
+
+      <div class="panel-title" style="margin-top:20px">Risk Flags <span class="panel-title-sub">Any dimension &lt; 5.0</span></div>
+      ${riskClients.length === 0 ? '<div class="r-empty">No critical dimension scores below 5.0.</div>' :
+        riskClients.map(c => {
+          const weakDims = dims.filter(d => c.ltvMetrics[d.key] < 5);
+          return `<div class="r-risk-row">
+            <div class="data-table-primary">${c.displayName}</div>
+            <div class="r-risk-dims">${weakDims.map(d =>
+              `<span class="r-risk-chip">${d.label}: ${c.ltvMetrics[d.key]}</span>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+    </div>
+  </div>`;
+}
+
+// ── Tab 4: Profitability ──────────────────────────────────
+function renderRptProfitability() {
+  const totalRev = clients.reduce((s,c) => s + c.ltvMetrics.estimatedAnnualRevenue, 0);
+  const totalLTV = clients.reduce((s,c) => s + c.ltvMetrics.projectedLTV, 0);
+  const totalAUM = clients.reduce((s,c) => s + c.aum, 0);
+
+  // Sorted by revenue
+  const byRev = [...clients].sort((a,b) => b.ltvMetrics.estimatedAnnualRevenue - a.ltvMetrics.estimatedAnnualRevenue);
+  const maxRev = byRev[0].ltvMetrics.estimatedAnnualRevenue;
+
+  // Revenue concentration (cumulative)
+  let cumRev = 0;
+  const cumulative = byRev.map(c => {
+    cumRev += c.ltvMetrics.estimatedAnnualRevenue;
+    return { client: c, cumPct: (cumRev/totalRev*100).toFixed(0) };
+  });
+
+  // At-risk LTV: clients with health < 7 or engagement score < 5
+  const ltvAtRisk = clients.filter(c => c.healthLabel === 'At Risk' || c.ltvMetrics.engagementScore < 5);
+  const ltvAtRiskTotal = ltvAtRisk.reduce((s,c) => s+c.ltvMetrics.projectedLTV, 0);
+
+  // Service cost estimate from caTasks
+  const BLENDED_RATE = 85; // $/hr blended CA/ACA rate
+  const clientCosts = clients.map(c => {
+    const taskHrs = caTasks.filter(t => t.clientId === c.id).reduce((s,t) => s+(t.estHours||0), 0);
+    const annualCostEst = taskHrs * 12 * BLENDED_RATE; // monthly snapshot × 12
+    const grossMargin = c.ltvMetrics.estimatedAnnualRevenue - annualCostEst;
+    const marginPct = (grossMargin / c.ltvMetrics.estimatedAnnualRevenue * 100);
+    return { client: c, taskHrs, annualCostEst, grossMargin, marginPct };
+  }).sort((a,b) => b.client.ltvMetrics.estimatedAnnualRevenue - a.client.ltvMetrics.estimatedAnnualRevenue);
+
+  const totalEstCost = clientCosts.reduce((s,r) => s+r.annualCostEst, 0);
+  const overallMargin = ((totalRev - totalEstCost)/totalRev*100).toFixed(0);
+
+  // Fee rate comparison
+  const feeRates = [...clients].sort((a,b) => b.ltvMetrics.feeRate - a.ltvMetrics.feeRate);
+
+  return `
+  <div class="r-insights-row">
+    ${rInsight('Annual Revenue', formatCurrency(totalRev), ((totalRev/totalAUM)*100).toFixed(2)+'% blended fee')}
+    ${rInsight('Projected LTV', formatCurrency(totalLTV), 'Across all relationships')}
+    ${rInsight('LTV at Risk', formatCurrency(ltvAtRiskTotal), ltvAtRisk.map(c=>c.displayName.split(' ')[1]).join(', '), '#C0392B')}
+    ${rInsight('Est. Gross Margin', overallMargin+'%', 'After estimated CA service cost', overallMargin >= 70 ? '#2D7A2D' : '#B8923C')}
+    ${rInsight('Revenue / AUM', ((totalRev/totalAUM)*100).toFixed(3)+'%', 'Effective fee rate on book', 'var(--primary)')}
+  </div>
+
+  <div class="panel-card" style="margin-top:16px;padding:0;overflow:hidden">
+    <div style="padding:14px 20px 8px"><div class="panel-title" style="margin:0">Revenue Waterfall &amp; Concentration</div></div>
+    <table class="data-table">
+      <thead><tr><th>Client</th><th>Tier</th><th style="text-align:right">Annual Revenue</th><th>Share of Book</th><th style="text-align:right">Cumulative</th><th style="text-align:right">Projected LTV</th><th style="text-align:right">Fee Rate</th></tr></thead>
+      <tbody>${cumulative.map(({client: c, cumPct}) => {
+        const revPct = (c.ltvMetrics.estimatedAnnualRevenue/totalRev*100);
+        const isConc = +cumPct <= 75;
+        return `<tr>
+          <td><div class="data-table-primary">${c.displayName}</div></td>
+          <td><span class="tier-badge ${tierClass(c.tier)}">${tierLabel(c.tier)}</span></td>
+          <td class="data-table-num">${formatCurrency(c.ltvMetrics.estimatedAnnualRevenue)}</td>
+          <td style="min-width:140px">
+            <div class="r-bar-with-label">
+              ${rBar(revPct, isConc ? '#0C2340' : '#6B8FAF')}
+              <span class="r-bar-pct">${revPct.toFixed(1)}%</span>
+            </div>
+          </td>
+          <td class="data-table-num"><span style="color:${+cumPct<=50?'#C0392B':+cumPct<=75?'#B8923C':'inherit'}">${cumPct}%</span></td>
+          <td class="data-table-num">${formatCurrency(c.ltvMetrics.projectedLTV)}</td>
+          <td class="data-table-num">${(c.ltvMetrics.feeRate*100).toFixed(2)}%</td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="reports-grid" style="margin-top:16px">
+    <div class="panel-card">
+      <div class="panel-title">Est. Profitability by Client <span class="panel-title-sub">Revenue minus CA service cost (${BLENDED_RATE}/hr est.)</span></div>
+      <table class="data-table">
+        <thead><tr><th>Client</th><th style="text-align:right">Revenue</th><th style="text-align:right">Est. Cost</th><th style="text-align:right">Gross Margin</th></tr></thead>
+        <tbody>${clientCosts.map(r => `
+          <tr>
+            <td class="data-table-primary">${r.client.displayName.split(' ')[1]}</td>
+            <td class="data-table-num">${formatCurrency(r.client.ltvMetrics.estimatedAnnualRevenue)}</td>
+            <td class="data-table-num data-table-sub">${r.annualCostEst > 0 ? formatCurrency(r.annualCostEst) : '—'}</td>
+            <td class="data-table-num">
+              <span style="color:${r.marginPct>=70?'#2D7A2D':r.marginPct>=50?'#B8923C':'#C0392B'}">
+                ${r.annualCostEst > 0 ? r.marginPct.toFixed(0)+'%' : 'N/A'}
+              </span>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="r-note">* Cost estimate based on tracked task hours × $${BLENDED_RATE}/hr blended rate. Does not include advisor time.</div>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">LTV at Risk</div>
+      ${ltvAtRisk.length === 0 ? '<div class="r-empty">No clients flagged as at-risk.</div>' :
+        ltvAtRisk.map(c => `
+        <div class="r-risk-ltv-row">
+          <div>
+            <div class="data-table-primary">${c.displayName}</div>
+            <div class="data-table-sub">${c.healthLabel} · Engagement: ${c.ltvMetrics.engagementScore}/10</div>
+          </div>
+          <div style="text-align:right">
+            <div class="data-table-primary" style="color:#C0392B">${formatCurrency(c.ltvMetrics.projectedLTV)}</div>
+            <div class="data-table-sub">at risk</div>
+          </div>
+        </div>`).join('')}
+      <div class="r-ltv-total" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <span class="data-table-sub">Total projected LTV at risk</span>
+        <span class="data-table-primary" style="color:#C0392B">${formatCurrency(ltvAtRiskTotal)}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Tab 5: Staffing & Capacity ────────────────────────────
+function renderRptStaffing() {
+  const totalAUM = clients.reduce((s,c) => s + c.aum, 0);
+  const HOURS_PER_WEEK = 35;
+  const WEEKS_PER_YEAR = 48;
+  const CAPACITY_PER_PERSON = HOURS_PER_WEEK * WEEKS_PER_YEAR; // 1,680 hrs/yr
+  const COMPLEXITY_MULT = 3.5; // UHNW complexity premium over standard
+  const STD_HOURS_PER_10M = 50; // industry benchmark: 50 hrs per $10M AUM per yr
+  const BLENDED_RATE = 85; // $/hr blended
+  const AVG_AUM_GROWTH = (clients.reduce((s,c)=>s+c.aumGrowthYTD,0)/clients.length);
+
+  // Staff workload from caTasks
+  const staffLoad = CA_STAFF.map(s => {
+    const tasks = caTasks.filter(t => t.assignedTo === s.id);
+    const estHrs = tasks.reduce((sum,t) => sum+(t.estHours||0), 0);
+    const openTasks = tasks.filter(t => t.status !== 'completed').length;
+    const overdueTasks = tasks.filter(t => t.status !== 'completed' && t.dueDate < TODAY).length;
+    return { staff: s, taskCount: tasks.length, estHrs, openTasks, overdueTasks,
+      annualHrsEst: estHrs * 12 };  // monthly snapshot × 12
+  });
+
+  const totalStaff = CA_STAFF.length;
+  const totalCapacity = totalStaff * CAPACITY_PER_PERSON;
+
+  // Demand estimate (industry model)
+  const aumDemandHrs = (totalAUM / 10000000) * STD_HOURS_PER_10M * COMPLEXITY_MULT;
+  const utilization  = Math.min(aumDemandHrs / totalCapacity * 100, 100);
+
+  // AUM per staff
+  const aumPerStaff = totalAUM / totalStaff;
+
+  // Hiring trigger: when will we hit 90% capacity?
+  // Growth rate → AUM next year → demand hours next year
+  const aumNext1yr   = totalAUM * (1 + AVG_AUM_GROWTH);
+  const aumNext2yr   = totalAUM * Math.pow(1 + AVG_AUM_GROWTH, 2);
+  const demandNext1  = (aumNext1yr / 10000000) * STD_HOURS_PER_10M * COMPLEXITY_MULT;
+  const demandNext2  = (aumNext2yr / 10000000) * STD_HOURS_PER_10M * COMPLEXITY_MULT;
+  const util1 = (demandNext1 / totalCapacity * 100);
+  const util2 = (demandNext2 / totalCapacity * 100);
+  const needsHire1yr = util1 > 90;
+  const needsHire2yr = util2 > 90;
+
+  // Revenue per capita
+  const totalRev = clients.reduce((s,c)=>s+c.ltvMetrics.estimatedAnnualRevenue,0);
+  const revPerStaff = totalRev / totalStaff;
+
+  // Task type distribution
+  const typeCount = {};
+  caTasks.forEach(t => { typeCount[t.type] = (typeCount[t.type]||0) + 1; });
+  const typeSorted = Object.entries(typeCount).sort((a,b) => b[1]-a[1]);
+  const maxTypeCount = typeSorted[0]?.[1] || 1;
+
+  const roleColors = { SCA: '#0C2340', ACA: '#6B8FAF', CA: '#B8923C' };
+
+  return `
+  <div class="r-insights-row">
+    ${rInsight('Total Team', totalStaff+' people', CA_STAFF.map(s=>s.role).sort().join(', '))}
+    ${rInsight('AUM per Staff', formatCurrency(aumPerStaff), 'Advisor + support team')}
+    ${rInsight('Revenue per Staff', formatCurrency(revPerStaff), 'Annual revenue / headcount')}
+    ${rInsight('Est. Capacity Used', utilization.toFixed(0)+'%', 'UHNW complexity-adjusted model', utilization>80?'#C0392B':utilization>60?'#B8923C':'#2D7A2D')}
+    ${rInsight('Annual Capacity', (totalCapacity).toLocaleString()+'h', totalStaff+' staff × '+CAPACITY_PER_PERSON+'h each')}
+  </div>
+
+  <div class="reports-grid" style="margin-top:16px">
+    <div class="panel-card">
+      <div class="panel-title">Team Workload Summary <span class="panel-title-sub">From tracked tasks (monthly snapshot × 12)</span></div>
+      <table class="data-table">
+        <thead><tr><th>Staff Member</th><th>Role</th><th style="text-align:center">Tasks</th><th style="text-align:center">Open</th><th style="text-align:center">Overdue</th><th style="text-align:right">Est. Annual Hrs</th></tr></thead>
+        <tbody>${staffLoad.map(r => `
+          <tr>
+            <td>
+              <span class="ops-avatar-chip" style="background:${roleColors[r.staff.role]||'#6B8FAF'};color:#fff;margin-right:8px">${r.staff.initials}</span>
+              <strong>${r.staff.name}</strong>
+            </td>
+            <td><span class="r-role-badge" style="background:${roleColors[r.staff.role]||'#6B8FAF'}22;color:${roleColors[r.staff.role]||'#6B8FAF'}">${r.staff.role}</span></td>
+            <td style="text-align:center">${r.taskCount}</td>
+            <td style="text-align:center">${r.openTasks}</td>
+            <td style="text-align:center;color:${r.overdueTasks>0?'#C0392B':'inherit'}">${r.overdueTasks}</td>
+            <td style="text-align:right">${r.annualHrsEst.toFixed(0)}h</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">Capacity Model</div>
+      <div class="r-capacity-model">
+        <div class="r-cap-row">
+          <span class="data-table-sub">Current AUM</span>
+          <span class="data-table-primary">${formatCurrency(totalAUM)}</span>
+        </div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Avg YTD AUM Growth</span>
+          <span class="data-table-primary">+${(AVG_AUM_GROWTH*100).toFixed(1)}%</span>
+        </div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Est. AUM in 12 months</span>
+          <span class="data-table-primary">${formatCurrency(aumNext1yr)}</span>
+        </div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Est. AUM in 24 months</span>
+          <span class="data-table-primary">${formatCurrency(aumNext2yr)}</span>
+        </div>
+        <div class="r-cap-divider"></div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Team capacity (annual hrs)</span>
+          <span class="data-table-primary">${totalCapacity.toLocaleString()}h</span>
+        </div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Demand estimate (current)</span>
+          <span class="data-table-primary">${Math.round(aumDemandHrs).toLocaleString()}h</span>
+        </div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Demand estimate (12 months)</span>
+          <span class="data-table-primary ${util1>90?'loss':''}">${Math.round(demandNext1).toLocaleString()}h (${util1.toFixed(0)}%)</span>
+        </div>
+        <div class="r-cap-row">
+          <span class="data-table-sub">Demand estimate (24 months)</span>
+          <span class="data-table-primary ${util2>90?'loss':''}">${Math.round(demandNext2).toLocaleString()}h (${util2.toFixed(0)}%)</span>
+        </div>
+      </div>
+
+      <div class="r-hiring-rec" style="border-color:${needsHire1yr?'#C0392B':needsHire2yr?'#B8923C':'#2D7A2D'}">
+        <div class="r-hiring-icon">${needsHire1yr?'⚠':needsHire2yr?'📋':'✓'}</div>
+        <div>
+          <div class="r-hiring-title" style="color:${needsHire1yr?'#C0392B':needsHire2yr?'#B8923C':'#2D7A2D'}">
+            ${needsHire1yr
+              ? 'Recommend hiring an ACA within 6 months'
+              : needsHire2yr
+              ? 'Initiate ACA search within 12–18 months'
+              : 'Current staffing adequate for 24-month horizon'}
+          </div>
+          <div class="r-hiring-sub">
+            ${needsHire1yr
+              ? 'At current growth (+'+((AVG_AUM_GROWTH*100).toFixed(1))+'%/yr), demand will exceed 90% capacity in 12 months. Adding 1 ACA increases capacity to '+(totalCapacity+CAPACITY_PER_PERSON).toLocaleString()+'h/yr.'
+              : needsHire2yr
+              ? 'Team will approach full capacity within 24 months at current AUM growth rate.'
+              : 'Model projects utilization at '+util2.toFixed(0)+'% in 24 months — monitor quarterly.'}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-card" style="margin-top:16px">
+    <div class="panel-title">Task Volume by Category <span class="panel-title-sub">Where CA team time is allocated</span></div>
+    ${typeSorted.map(([type, count]) => {
+      const meta = CA_TASK_TYPES[type];
+      return `<div class="r-eng-row" style="margin-bottom:6px">
+        <span class="r-eng-name data-table-primary">${meta ? meta.label : type}</span>
+        ${rBar(count/maxTypeCount*100, meta ? meta.color : 'var(--primary)')}
+        <span class="r-eng-count">${count} task${count!==1?'s':''}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ── Tab 3: Engagement ─────────────────────────────────────
+function renderRptEngagement() {
+  const sorted = [...clients].sort((a,b) => a.ltvMetrics.engagementScore - b.ltvMetrics.engagementScore);
+  const avgEngagement = (clients.reduce((s,c) => s+c.ltvMetrics.engagementScore,0)/clients.length).toFixed(1);
+  const avgDaysSince  = Math.round(clients.reduce((s,c) => s+daysSince(c.lastTouchpoint.date),0)/clients.length);
+
+  // Touchpoint type counts across all clients
+  const allTp = clients.flatMap(c => c.touchpoints);
+  const tpTypes = {};
+  allTp.forEach(tp => { tpTypes[tp.type] = (tpTypes[tp.type]||0)+1; });
+  const tpTypeSorted = Object.entries(tpTypes).sort((a,b) => b[1]-a[1]);
+
+  // Touchpoints per client in last 90 days
+  const tpLast90 = clients.map(c => ({
+    client: c,
+    count: c.touchpoints.filter(tp => daysSince(tp.date) <= 90).length,
+    lastDays: daysSince(c.lastTouchpoint.date)
+  })).sort((a,b) => a.count - b.count);
+
+  const maxTp = Math.max(...tpLast90.map(x => x.count), 1);
+
+  // At-risk contacts (>60 days)
+  const atRisk = clients.filter(c => daysSince(c.lastTouchpoint.date) > 60)
+    .sort((a,b) => daysSince(b.lastTouchpoint.date) - daysSince(a.lastTouchpoint.date));
+
+  // Upcoming milestones next 90 days
+  const milestones = clients.flatMap(c =>
+    c.upcomingMilestones
+      .filter(m => { const d = daysUntil(m.date); return d >= 0 && d <= 90; })
+      .map(m => ({ ...m, client: c, daysOut: daysUntil(m.date) }))
+  ).sort((a,b) => a.daysOut - b.daysOut);
+
+  const tpTypeLabel = {
+    meeting: 'Meeting', phone_call: 'Phone Call', email: 'Email',
+    gift_sent: 'Gift Sent', annual_review: 'Annual Review', event: 'Event'
+  };
+
+  return `
+  <div class="r-insights-row">
+    ${rInsight('Avg Engagement Score', avgEngagement+'/10', 'Across all clients', rScoreColor(+avgEngagement))}
+    ${rInsight('Avg Days Since Contact', avgDaysSince+'d', avgDaysSince > 30 ? 'Above 30-day target' : 'Within 30-day target', avgDaysSince > 30 ? '#C0392B' : '#2D7A2D')}
+    ${rInsight('Touchpoints (Last 90d)', allTp.filter(tp => daysSince(tp.date) <= 90).length+'', 'Across all clients', 'var(--primary)')}
+    ${rInsight('At-Risk Contacts', atRisk.length+'', '>60 days since last contact', atRisk.length > 0 ? '#C0392B' : '#2D7A2D')}
+    ${rInsight('Milestones Next 90d', milestones.length+'', 'Birthdays, reviews, events', 'var(--primary)')}
+  </div>
+
+  <div class="reports-grid" style="margin-top:16px">
+    <div class="panel-card">
+      <div class="panel-title">Touchpoint Frequency <span class="panel-title-sub">Last 90 days — sorted by activity</span></div>
+      ${tpLast90.map(({client: c, count, lastDays}) => {
+        const isOver = lastDays > 60;
+        return `<div class="r-eng-row">
+          <div class="r-eng-name">
+            <span class="data-table-primary">${c.displayName.split(' ')[1]}</span>
+            <span class="data-table-sub" style="color:${isOver?'#C0392B':'var(--text-muted)'}">
+              ${lastDays}d ago${isOver?' ⚠':''}
+            </span>
+          </div>
+          ${rBar(count/maxTp*100, rScoreColor(c.ltvMetrics.engagementScore))}
+          <span class="r-eng-count">${count} contact${count!==1?'s':''}</span>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="panel-card">
+      <div class="panel-title">Contact Type Breakdown</div>
+      ${tpTypeSorted.map(([type, count]) => `
+      <div class="r-eng-row">
+        <span class="data-table-primary r-eng-name">${tpTypeLabel[type] || type}</span>
+        ${rBar(count/allTp.length*100)}
+        <span class="r-eng-count">${count}</span>
+      </div>`).join('')}
+
+      <div class="panel-title" style="margin-top:20px">Engagement Quality <span class="panel-title-sub">Score by client</span></div>
+      ${[...clients].sort((a,b)=>b.ltvMetrics.engagementScore-a.ltvMetrics.engagementScore).map(c => `
+      <div class="r-eng-row">
+        <span class="data-table-primary r-eng-name">${c.displayName.split(' ')[1]}</span>
+        ${rBar(c.ltvMetrics.engagementScore*10, rScoreColor(c.ltvMetrics.engagementScore))}
+        ${rScoreChip(c.ltvMetrics.engagementScore)}
+      </div>`).join('')}
+    </div>
+  </div>
+
+  ${atRisk.length > 0 ? `
+  <div class="panel-card" style="margin-top:16px;border-left:3px solid #C0392B">
+    <div class="panel-title" style="color:#C0392B">⚠ Overdue for Contact</div>
+    <table class="data-table">
+      <thead><tr><th>Client</th><th>Last Contact</th><th>Type</th><th>Summary</th><th>Engagement Score</th></tr></thead>
+      <tbody>${atRisk.map(c => `
+        <tr>
+          <td><div class="data-table-primary">${c.displayName}</div></td>
+          <td class="data-table-num" style="color:#C0392B;font-weight:700">${daysSince(c.lastTouchpoint.date)}d ago</td>
+          <td class="data-table-sub">${c.lastTouchpoint.type.replace('_',' ')}</td>
+          <td class="data-table-sub">${c.lastTouchpoint.summary}</td>
+          <td>${rScoreChip(c.ltvMetrics.engagementScore)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}
+
+  ${milestones.length > 0 ? `
+  <div class="panel-card" style="margin-top:16px;padding:0;overflow:hidden">
+    <div style="padding:14px 20px 8px"><div class="panel-title" style="margin:0">Upcoming Milestones — Next 90 Days</div></div>
+    <table class="data-table">
+      <thead><tr><th>Client</th><th>Date</th><th>Days Out</th><th>Event</th><th>Urgent</th></tr></thead>
+      <tbody>${milestones.map(m => `
+        <tr>
+          <td class="data-table-primary">${m.client.displayName}</td>
+          <td class="data-table-sub">${m.date}</td>
+          <td class="data-table-num ${m.daysOut<=14?'loss':''}">${m.daysOut}d</td>
+          <td>${m.description}</td>
+          <td>${m.urgent?'<span style="color:#C0392B;font-weight:700">Yes</span>':'—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>` : ''}`;
 }
 
 // ─── ATTENTION STRIP ──────────────────────────────────────
@@ -2959,6 +3607,13 @@ function attachEventListeners() {
     if (e.target.closest('[data-ops-new-task]')) {
       showNewTaskModal = true;
       refreshOpsView(); return;
+    }
+
+    // Reports sub-tab
+    const reportTabBtn = e.target.closest('[data-report-tab]');
+    if (reportTabBtn) {
+      reportsTab = reportTabBtn.getAttribute('data-report-tab');
+      renderApp(); return;
     }
   });
 

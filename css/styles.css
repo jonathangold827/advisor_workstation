@@ -2426,3 +2426,309 @@ a { text-decoration: none; color: inherit; }
   .main-header { padding: 10px 12px; }
   .main-content { padding: 12px 10px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   § 27 — REPORTS SECTION
+   ══════════════════════════════════════════════════════════════ */
+
+/* Sub-navigation pill bar */
+.reports-sub-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 6px;
+}
+.rsn-btn {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.rsn-btn:hover { background: var(--border-light); color: var(--text-primary); }
+.rsn-btn.active { background: var(--primary); color: #fff; }
+
+/* Sub-heading with secondary label */
+.panel-title-sub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 8px;
+  letter-spacing: .02em;
+}
+
+/* ── Score chip (colored badge) ── */
+.r-score-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+
+/* ── Thin progress bar ── */
+.r-bar-track {
+  width: 100%;
+  height: 7px;
+  background: var(--border-light);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.r-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+.r-bar-with-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.r-bar-pct {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 34px;
+  text-align: right;
+}
+
+/* ── Insight cards row ── */
+.r-insights-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.r-insight-card {
+  flex: 1;
+  min-width: 120px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.r-ic-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 4px;
+}
+.r-ic-value {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--primary);
+}
+.r-ic-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* ── Alert row (Overview top-of-page) ── */
+.r-alert-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.r-alert-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.r-alert-chip.warn  { background: #FDF6EC; border-color: #E8C97A; color: #7A4F00; }
+.r-alert-chip.danger{ background: #FDF0EE; border-color: #E8A090; color: #7A1A10; }
+.r-alert-chip.info  { background: #EEF4FD; border-color: #9AB8E0; color: #1A3A6A; }
+.r-alert-chip.ok    { background: #EDF7ED; border-color: #90C890; color: #1A5A1A; }
+
+/* ── Opportunity / risk / LTV panel rows ── */
+.r-opp-row, .r-risk-row, .r-ltv-total {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.r-opp-row:last-child, .r-risk-row:last-child, .r-ltv-total:last-child { border-bottom: none; }
+.r-ltv-total {
+  font-weight: 700;
+  color: var(--primary);
+  background: #F5F0E8;
+  border-radius: 6px;
+  padding: 9px 10px;
+  margin-top: 4px;
+}
+.r-risk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #FDF0EE;
+  color: #C0392B;
+  border: 1px solid #F0B8B0;
+}
+.r-risk-dims {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+.r-risk-ltv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-light);
+}
+.r-risk-ltv-row:last-child { border-bottom: none; }
+
+/* ── Engagement rows ── */
+.r-eng-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 60px 60px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.r-eng-row:last-child { border-bottom: none; }
+.r-eng-name { font-weight: 600; color: var(--text-primary); }
+.r-eng-count { text-align: right; color: var(--text-muted); font-size: 12px; }
+
+/* Contact type service tags */
+.r-services-list { display: flex; gap: 5px; flex-wrap: wrap; }
+.r-service-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #E8EEF4;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+/* Composite / role badges */
+.r-composite-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.r-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--border-light);
+  color: var(--text-muted);
+}
+
+/* ── Staffing capacity model ── */
+.r-capacity-model {
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.r-cap-row {
+  display: grid;
+  grid-template-columns: 160px repeat(4, 1fr);
+  align-items: center;
+  gap: 0;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 13px;
+}
+.r-cap-row:last-child { border-bottom: none; }
+.r-cap-row.header {
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+}
+.r-cap-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--border-light);
+  margin: 0;
+}
+
+/* Hiring recommendation banner */
+.r-hiring-rec {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid;
+  margin-bottom: 20px;
+}
+.r-hiring-rec.hire-now  { background: #FDF0EE; border-color: #E8A090; }
+.r-hiring-rec.plan-ahead{ background: #FDF6EC; border-color: #E8C97A; }
+.r-hiring-rec.adequate  { background: #EDF7ED; border-color: #90C890; }
+.r-hiring-icon { font-size: 24px; line-height: 1; flex-shrink: 0; }
+.r-hiring-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.r-hiring-rec.hire-now  .r-hiring-title { color: #7A1A10; }
+.r-hiring-rec.plan-ahead .r-hiring-title { color: #7A4F00; }
+.r-hiring-rec.adequate  .r-hiring-title { color: #1A5A1A; }
+.r-hiring-sub { font-size: 12px; color: var(--text-muted); }
+
+/* Empty / note states */
+.r-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+.r-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 6px;
+}
+
+/* Responsive: collapse eng grid on mobile */
+@media (max-width: 680px) {
+  .r-eng-row { grid-template-columns: 1fr 50px 50px; }
+  .r-eng-row .r-services-list { display: none; }
+  .r-cap-row { grid-template-columns: 120px repeat(4, 1fr); font-size: 11px; padding: 9px 10px; }
+  .r-insights-row { gap: 8px; }
+  .r-insight-card { min-width: 100px; padding: 10px 12px; }
+  .r-ic-value { font-size: 18px; }
+}
