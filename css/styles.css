@@ -1965,55 +1965,50 @@ a { text-decoration: none; color: inherit; }
    26. CA TASK DASHBOARD (OPERATIONS VIEW)
 ══════════════════════════════════════════════════════════ */
 
-/* Stats bar */
+/* Stats bar — compact row of 4 */
 .ops-stats-bar {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 12px;
-  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 .ops-stat {
+  flex: 1;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-md);
-  padding: 14px 16px;
-  text-align: center;
+  padding: 10px 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
-.ops-stat-alert { border-top: 3px solid #C0392B; }
-.ops-stat-warn  { border-top: 3px solid #B8923C; }
-.ops-stat-ok    { border-top: 3px solid #3A7A3A; }
-.ops-stat-val   { font-size: 24px; font-weight: 700; color: var(--primary); line-height: 1; }
+.ops-stat-alert { border-left: 3px solid #C0392B; }
+.ops-stat-warn  { border-left: 3px solid #B8923C; }
+.ops-stat-ok    { border-left: 3px solid #3A7A3A; }
+.ops-stat-val   { font-size: 22px; font-weight: 700; color: var(--primary); line-height: 1; }
 .ops-stat-alert .ops-stat-val { color: #C0392B; }
 .ops-stat-warn  .ops-stat-val { color: #B8923C; }
 .ops-stat-ok    .ops-stat-val { color: #3A7A3A; }
-.ops-stat-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
+.ops-stat-label { font-size: 12px; color: var(--text-muted); }
 
 /* View toggle */
-.ops-view-toggle { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 3px; }
-.ops-view-btn { padding: 6px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; background: transparent; color: var(--text-muted); }
+.ops-view-toggle { display: flex; gap: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 3px; }
+.ops-view-btn { padding: 5px 14px; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; background: transparent; color: var(--text-muted); white-space: nowrap; }
 .ops-view-btn.active { background: var(--primary); color: #fff; }
 
 /* Filter bar */
-.ops-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
+.ops-filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .ops-filter-sel {
-  padding: 7px 10px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   background: var(--surface);
   font-size: 13px;
   color: var(--text);
   cursor: pointer;
-  min-width: 140px;
 }
 .ops-add-btn {
   margin-left: auto;
-  padding: 7px 16px;
+  padding: 6px 14px;
   background: var(--primary);
   color: #fff;
   border: none;
@@ -2021,63 +2016,97 @@ a { text-decoration: none; color: inherit; }
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
 }
 .ops-add-btn:hover { background: #1E4A78; }
 
-/* Kanban board */
-.ops-board {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  align-items: start;
-}
-.ops-board-col {
-  background: #F8F6F2;
-  border-radius: var(--r-md);
-  border: 1px solid var(--border);
-  min-height: 200px;
-}
-.ops-col-header {
+/* Grouped list */
+.ops-groups { display: flex; flex-direction: column; gap: 0; }
+
+.ops-group-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: #F8F6F2;
+  border: 1px solid var(--border);
+  border-bottom: none;
   border-radius: var(--r-md) var(--r-md) 0 0;
+  margin-top: 12px;
 }
-.ops-col-title { font-size: 13px; font-weight: 600; color: var(--text); }
-.ops-col-count { font-size: 12px; background: var(--border); color: var(--text-muted); padding: 2px 8px; border-radius: 12px; }
-.ops-col-cards { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
-.ops-empty-col { padding: 20px; text-align: center; color: var(--text-muted); font-size: 12px; }
-
-/* Task card */
-.ops-task-card {
+.ops-groups > :first-child .ops-group-header,
+.ops-group-header:first-of-type { margin-top: 0; }
+.ops-group-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+}
+.ops-group-chips { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+.ops-group-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: box-shadow .15s, transform .1s;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
-.ops-task-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.1); transform: translateY(-1px); }
-.ops-task-card.overdue { border-left: 3px solid #C0392B; }
-.ops-card-header { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
-.ops-type-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.ops-card-type { font-size: 11px; color: var(--text-muted); flex: 1; }
-.ops-priority-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.ops-card-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; margin-bottom: 3px; }
-.ops-card-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
-.ops-card-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ops-card-client { font-size: 11px; color: var(--primary); font-weight: 600; }
-.ops-card-assignee { font-size: 11px; color: var(--text-muted); }
-.ops-card-due { font-size: 11px; color: var(--text-muted); margin-left: auto; }
-.ops-card-due.overdue-text { color: #C0392B; font-weight: 600; }
-.ops-card-notes { margin-top: 6px; font-size: 11px; color: var(--text-muted); line-height: 1.4; border-top: 1px solid var(--border); padding-top: 6px; }
+.ops-chip-open    { background: #EAF0F8; border-color: #0C2340; color: #0C2340; }
+.ops-chip-overdue { background: #FDF0EE; border-color: #C0392B; color: #C0392B; }
+.ops-chip-high    { background: #FEF3EE; border-color: #E67E22; color: #C0392B; }
 
-/* Reports section */
-.ops-reports { display: flex; flex-direction: column; gap: 16px; }
+/* Task table */
+.ops-task-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  overflow: hidden;
+  margin-bottom: 0;
+}
+.ops-task-table thead th {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.ops-task-row td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; background: #fff; }
+.ops-task-row:last-child td { border-bottom: none; }
+.ops-task-row:hover td { background: #F5F8FC; }
+.ops-task-row.ops-row-overdue td { background: #FFFAF9; }
+.ops-task-row.ops-row-done td { opacity: .6; }
+
+/* Row columns */
+.ops-row-status { width: 24px; }
+.ops-status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; }
+.ops-row-title { min-width: 200px; }
+.ops-row-task-title { display: block; font-size: 13px; font-weight: 600; color: var(--text); }
+.ops-row-sub { display: block; font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.ops-row-type { width: 140px; }
+.ops-type-chip { font-size: 11px; padding: 2px 7px; border-radius: 10px; border: 1px solid; font-weight: 500; white-space: nowrap; }
+.ops-row-client { font-size: 12px; color: var(--primary); font-weight: 600; width: 90px; }
+.ops-row-assignee { width: 44px; }
+.ops-avatar-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  font-size: 11px; font-weight: 700; cursor: default;
+  flex-shrink: 0;
+}
+.ops-row-due { font-size: 12px; color: var(--text-muted); width: 90px; white-space: nowrap; }
+.ops-row-due.overdue-text { color: #C0392B; font-weight: 600; }
+.ops-overdue-flag { display: inline-block; margin-left: 4px; color: #C0392B; font-weight: 900; font-size: 13px; }
+.ops-row-priority { width: 20px; }
+.ops-pri-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+
+.ops-empty { padding: 32px; text-align: center; color: var(--text-muted); font-size: 14px; }
+.ops-empty-group { padding: 10px 14px; font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 0 0 var(--r-md) var(--r-md); margin-bottom: 0; background: #fff; }
 
 /* Page header row with view toggle */
 .page-title-row { display: flex; justify-content: space-between; align-items: flex-start; }

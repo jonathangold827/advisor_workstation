@@ -497,8 +497,7 @@ let caTasks = [
 
 let caTasksNextId = 31;
 
-const OPS_VIEWS = { dashboard: 'dashboard', reports: 'reports' };
-let opsView = 'dashboard';
+let opsView = 'family'; // 'family' | 'type' | 'staff'
 let opsFilters = { assignee: 'all', client: 'all', type: 'all', status: 'all' };
 let showNewTaskModal = false;
 let newTaskDraft = { clientId: '', type: 'cash', subType: '', title: '', assignedTo: '', priority: 'medium', dueDate: '', estHours: '', recurring: false, notes: '' };
@@ -2124,21 +2123,33 @@ function setupDonutInteractivity() {
 }
 
 // ─── OPERATIONS VIEW (CA Task Dashboard) ──────────────────
-function renderOperationsView() {
-  const STATUS_META = {
-    pending:          { label: 'Pending',         color: '#5A6B7A' },
-    in_progress:      { label: 'In Progress',     color: '#0C2340' },
-    awaiting_client:  { label: 'Awaiting Client', color: '#B8923C' },
-    completed:        { label: 'Completed',       color: '#3A7A3A' },
-  };
-  const PRIORITY_META = { high: { label: 'High', color: '#C0392B' }, medium: { label: 'Medium', color: '#B8923C' }, low: { label: 'Low', color: '#5A7A5A' } };
+const STATUS_META = {
+  pending:          { label: 'Pending',         color: '#5A6B7A' },
+  in_progress:      { label: 'In Progress',     color: '#1E4A78' },
+  awaiting_client:  { label: 'Awaiting Client', color: '#B8923C' },
+  completed:        { label: 'Completed',       color: '#3A7A3A' },
+};
+const PRIORITY_META = {
+  high:   { label: 'High',   color: '#C0392B' },
+  medium: { label: 'Med',    color: '#B8923C' },
+  low:    { label: 'Low',    color: '#5A7A5A' }
+};
 
+function renderOperationsView() {
   // ── Filtered task list ────────────────────────────────
   let tasks = [...caTasks];
   if (opsFilters.assignee !== 'all') tasks = tasks.filter(t => t.assignedTo === opsFilters.assignee);
-  if (opsFilters.client  !== 'all') tasks = tasks.filter(t => String(t.clientId) === opsFilters.client);
-  if (opsFilters.type    !== 'all') tasks = tasks.filter(t => t.type === opsFilters.type);
-  if (opsFilters.status  !== 'all') tasks = tasks.filter(t => t.status === opsFilters.status);
+  if (opsFilters.status   !== 'all') tasks = tasks.filter(t => t.status === opsFilters.status);
+
+  // Sort: overdue + high priority first, then by due date
+  tasks.sort((a, b) => {
+    const aOver = a.status !== 'completed' && a.dueDate < TODAY;
+    const bOver = b.status !== 'completed' && b.dueDate < TODAY;
+    if (aOver !== bOver) return aOver ? -1 : 1;
+    const priOrd = { high: 0, medium: 1, low: 2 };
+    if (priOrd[a.priority] !== priOrd[b.priority]) return priOrd[a.priority] - priOrd[b.priority];
+    return a.dueDate.localeCompare(b.dueDate);
+  });
 
   // ── Stats ─────────────────────────────────────────────
   const allTasks = caTasks;
@@ -2147,78 +2158,106 @@ function renderOperationsView() {
   const done     = allTasks.filter(t => t.status === 'completed').length;
   const awaiting = allTasks.filter(t => t.status === 'awaiting_client').length;
 
-  // ── Status columns for board view ─────────────────────
-  const statuses = ['pending', 'in_progress', 'awaiting_client', 'completed'];
+  function clientName(id) { const c = clients.find(x => x.id === id); return c ? c.displayName : 'Unknown'; }
+  function staffInitials(id) { const s = CA_STAFF.find(x => x.id === id); return s ? s.initials : '??'; }
+  function staffName(id)  { const s = CA_STAFF.find(x => x.id === id); return s ? s.name : id; }
 
-  function clientName(id) { const c = clients.find(x => x.id === id); return c ? c.displayName.split(' ')[1] : 'Unknown'; }
-  function staffName(id)  { const s = CA_STAFF.find(x => x.id === id); return s ? s.name.split(' ')[0] : id; }
-
-  function taskCard(t) {
-    const sm = STATUS_META[t.status] || STATUS_META.pending;
-    const pm = PRIORITY_META[t.priority] || PRIORITY_META.medium;
-    const tm = CA_TASK_TYPES[t.type] || CA_TASK_TYPES.general;
-    const isOverdue = t.status !== 'completed' && t.dueDate < TODAY;
+  // ── Compact task row ──────────────────────────────────
+  function taskRow(t, showClient, showType) {
+    const sm      = STATUS_META[t.status] || STATUS_META.pending;
+    const pm      = PRIORITY_META[t.priority] || PRIORITY_META.medium;
+    const tm      = CA_TASK_TYPES[t.type] || CA_TASK_TYPES.general;
+    const isOver  = t.status !== 'completed' && t.dueDate < TODAY;
+    const isDone  = t.status === 'completed';
     return `
-    <div class="ops-task-card${isOverdue ? ' overdue' : ''}" data-task-id="${t.id}">
-      <div class="ops-card-header">
-        <span class="ops-type-dot" style="background:${tm.color}"></span>
-        <span class="ops-card-type">${tm.label}</span>
-        <span class="ops-priority-badge" style="color:${pm.color}">${pm.label}</span>
-      </div>
-      <div class="ops-card-title">${t.title}</div>
-      <div class="ops-card-sub">${t.subType}</div>
-      <div class="ops-card-meta">
-        <span class="ops-card-client">${clientName(t.clientId)}</span>
-        <span class="ops-card-assignee">${staffName(t.assignedTo)}</span>
-        <span class="ops-card-due${isOverdue ? ' overdue-text' : ''}">Due ${t.dueDate}</span>
-      </div>
-      ${t.notes ? `<div class="ops-card-notes">${t.notes.slice(0, 80)}${t.notes.length > 80 ? '…' : ''}</div>` : ''}
+    <tr class="ops-task-row${isOver ? ' ops-row-overdue' : ''}${isDone ? ' ops-row-done' : ''}" data-task-id="${t.id}">
+      <td class="ops-row-status">
+        <span class="ops-status-dot" style="background:${sm.color}" title="${sm.label}"></span>
+      </td>
+      <td class="ops-row-title">
+        <span class="ops-row-task-title">${t.title}</span>
+        <span class="ops-row-sub">${t.subType}</span>
+      </td>
+      ${showType  ? `<td class="ops-row-type"><span class="ops-type-chip" style="border-color:${tm.color};color:${tm.color}">${tm.label}</span></td>` : ''}
+      ${showClient? `<td class="ops-row-client">${clientName(t.clientId).split(' ')[1]}</td>` : ''}
+      <td class="ops-row-assignee">
+        <span class="ops-avatar-chip" title="${staffName(t.assignedTo)}">${staffInitials(t.assignedTo)}</span>
+      </td>
+      <td class="ops-row-due${isOver ? ' overdue-text' : ''}">
+        ${isDone ? '<span style="color:var(--text-muted)">Done</span>' : t.dueDate}
+        ${isOver ? '<span class="ops-overdue-flag">!</span>' : ''}
+      </td>
+      <td class="ops-row-priority">
+        <span class="ops-pri-dot" style="background:${pm.color}" title="${pm.label}"></span>
+      </td>
+    </tr>`;
+  }
+
+  // ── Group header ──────────────────────────────────────
+  function groupHeader(label, color, groupTasks) {
+    const gOpen    = groupTasks.filter(t => t.status !== 'completed').length;
+    const gOverdue = groupTasks.filter(t => t.status !== 'completed' && t.dueDate < TODAY).length;
+    const gHigh    = groupTasks.filter(t => t.priority === 'high' && t.status !== 'completed').length;
+    return `
+    <div class="ops-group-header" style="border-left:3px solid ${color}">
+      <span class="ops-group-name">${label}</span>
+      <span class="ops-group-chips">
+        <span class="ops-group-chip">${groupTasks.length} task${groupTasks.length!==1?'s':''}</span>
+        ${gOpen   ? `<span class="ops-group-chip ops-chip-open">${gOpen} open</span>` : ''}
+        ${gOverdue? `<span class="ops-group-chip ops-chip-overdue">${gOverdue} overdue</span>` : ''}
+        ${gHigh   ? `<span class="ops-group-chip ops-chip-high">${gHigh} high</span>` : ''}
+      </span>
     </div>`;
   }
+
+  // ── Build grouped content ─────────────────────────────
+  let groupedContent = '';
+
+  if (opsView === 'family') {
+    clients.forEach(c => {
+      const gt = tasks.filter(t => t.clientId === c.id);
+      if (!gt.length) return;
+      groupedContent += groupHeader(c.displayName, '#0C2340', gt);
+      groupedContent += `<table class="ops-task-table">
+        <thead><tr><th></th><th>Task</th><th>Assigned</th><th>Due</th><th></th></tr></thead>
+        <tbody>${gt.map(t => taskRow(t, false, true)).join('')}</tbody>
+      </table>`;
+    });
+
+  } else if (opsView === 'type') {
+    Object.entries(CA_TASK_TYPES).forEach(([key, tm]) => {
+      const gt = tasks.filter(t => t.type === key);
+      if (!gt.length) return;
+      groupedContent += groupHeader(tm.label, tm.color, gt);
+      groupedContent += `<table class="ops-task-table">
+        <thead><tr><th></th><th>Task</th><th>Client</th><th>Assigned</th><th>Due</th><th></th></tr></thead>
+        <tbody>${gt.map(t => taskRow(t, true, false)).join('')}</tbody>
+      </table>`;
+    });
+
+  } else {
+    // Staff view
+    groupedContent = renderOpsStaff(tasks);
+  }
+
+  const viewToggle = `
+  <div class="ops-view-toggle">
+    <button class="ops-view-btn${opsView==='family'?' active':''}" data-ops-view="family">By Family</button>
+    <button class="ops-view-btn${opsView==='type'?' active':''}" data-ops-view="type">By Task Type</button>
+    <button class="ops-view-btn${opsView==='staff'?' active':''}" data-ops-view="staff">By Staff</button>
+  </div>`;
 
   const filterBar = `
   <div class="ops-filter-bar">
     <select class="ops-filter-sel" data-ops-filter="assignee">
       <option value="all">All Staff</option>
-      ${CA_STAFF.map(s => `<option value="${s.id}"${opsFilters.assignee===s.id?' selected':''}>${s.name} (${s.role})</option>`).join('')}
-    </select>
-    <select class="ops-filter-sel" data-ops-filter="client">
-      <option value="all">All Clients</option>
-      ${clients.map(c => `<option value="${c.id}"${opsFilters.client===String(c.id)?' selected':''}>${c.displayName}</option>`).join('')}
-    </select>
-    <select class="ops-filter-sel" data-ops-filter="type">
-      <option value="all">All Types</option>
-      ${Object.entries(CA_TASK_TYPES).map(([k,v]) => `<option value="${k}"${opsFilters.type===k?' selected':''}>${v.label}</option>`).join('')}
+      ${CA_STAFF.map(s => `<option value="${s.id}"${opsFilters.assignee===s.id?' selected':''}>${s.name}</option>`).join('')}
     </select>
     <select class="ops-filter-sel" data-ops-filter="status">
       <option value="all">All Status</option>
       ${Object.entries(STATUS_META).map(([k,v]) => `<option value="${k}"${opsFilters.status===k?' selected':''}>${v.label}</option>`).join('')}
     </select>
     <button class="ops-add-btn" data-ops-new-task>+ New Task</button>
-  </div>`;
-
-  const board = opsView === 'dashboard' ? `
-  <div class="ops-board">
-    ${statuses.map(st => {
-      const col = tasks.filter(t => t.status === st);
-      const sm = STATUS_META[st];
-      return `
-      <div class="ops-board-col">
-        <div class="ops-col-header" style="border-top:3px solid ${sm.color}">
-          <span class="ops-col-title">${sm.label}</span>
-          <span class="ops-col-count">${col.length}</span>
-        </div>
-        <div class="ops-col-cards">
-          ${col.length ? col.map(taskCard).join('') : '<div class="ops-empty-col">No tasks</div>'}
-        </div>
-      </div>`;
-    }).join('')}
-  </div>` : renderOpsReports();
-
-  const viewToggle = `
-  <div class="ops-view-toggle">
-    <button class="ops-view-btn${opsView==='dashboard'?' active':''}" data-ops-view="dashboard">Task Board</button>
-    <button class="ops-view-btn${opsView==='reports'?' active':''}" data-ops-view="reports">Reports</button>
   </div>`;
 
   return `
@@ -2233,65 +2272,66 @@ function renderOperationsView() {
       </div>
     </div>
     <div class="ops-stats-bar">
-      <div class="ops-stat"><div class="ops-stat-val">${open}</div><div class="ops-stat-label">Open Tasks</div></div>
-      <div class="ops-stat ops-stat-alert"><div class="ops-stat-val">${overdue}</div><div class="ops-stat-label">Overdue</div></div>
-      <div class="ops-stat ops-stat-warn"><div class="ops-stat-val">${awaiting}</div><div class="ops-stat-label">Awaiting Client</div></div>
-      <div class="ops-stat ops-stat-ok"><div class="ops-stat-val">${done}</div><div class="ops-stat-label">Completed</div></div>
-      <div class="ops-stat"><div class="ops-stat-val">${allTasks.length}</div><div class="ops-stat-label">Total Tasks</div></div>
+      <div class="ops-stat"><span class="ops-stat-val">${open}</span><span class="ops-stat-label">Open</span></div>
+      <div class="ops-stat ops-stat-alert"><span class="ops-stat-val">${overdue}</span><span class="ops-stat-label">Overdue</span></div>
+      <div class="ops-stat ops-stat-warn"><span class="ops-stat-val">${awaiting}</span><span class="ops-stat-label">Awaiting Client</span></div>
+      <div class="ops-stat ops-stat-ok"><span class="ops-stat-val">${done}</span><span class="ops-stat-label">Completed</span></div>
     </div>
     ${filterBar}
-    ${board}
+    <div class="ops-groups">
+      ${groupedContent || '<div class="ops-empty">No tasks match the current filters.</div>'}
+    </div>
   </div>`;
 }
 
-function renderOpsReports() {
-  // ACA utilization table
-  const staffRows = CA_STAFF.map(s => {
-    const assigned = caTasks.filter(t => t.assignedTo === s.id);
-    const open     = assigned.filter(t => t.status !== 'completed').length;
-    const done     = assigned.filter(t => t.status === 'completed').length;
-    const overdue  = assigned.filter(t => t.status !== 'completed' && t.dueDate < TODAY).length;
-    const estHrs   = assigned.reduce((sum, t) => sum + (t.estHours || 0), 0);
-    return `<tr>
-      <td><strong>${s.name}</strong><br><span class="data-table-sub">${s.role}</span></td>
-      <td style="text-align:center">${assigned.length}</td>
-      <td style="text-align:center">${open}</td>
-      <td style="text-align:center;color:${overdue>0?'#C0392B':'inherit'}">${overdue}</td>
-      <td style="text-align:center">${done}</td>
-      <td style="text-align:right">${estHrs.toFixed(1)}h</td>
-    </tr>`;
-  }).join('');
-
-  // Client breakdown table
-  const clientRows = clients.map(c => {
-    const ct    = caTasks.filter(t => t.clientId === c.id);
-    const open  = ct.filter(t => t.status !== 'completed').length;
-    const hi    = ct.filter(t => t.priority === 'high' && t.status !== 'completed').length;
-    return `<tr>
-      <td><strong>${c.displayName}</strong></td>
-      <td style="text-align:center">${ct.length}</td>
-      <td style="text-align:center">${open}</td>
-      <td style="text-align:center;color:${hi>0?'#C0392B':'inherit'}">${hi}</td>
-    </tr>`;
-  }).join('');
-
-  return `
-  <div class="ops-reports">
-    <div class="panel-card">
-      <div class="panel-card-title">Staff Utilization</div>
-      <table class="data-table">
-        <thead><tr><th>Staff Member</th><th style="text-align:center">Assigned</th><th style="text-align:center">Open</th><th style="text-align:center">Overdue</th><th style="text-align:center">Done</th><th style="text-align:right">Est. Hours</th></tr></thead>
-        <tbody>${staffRows}</tbody>
-      </table>
-    </div>
-    <div class="panel-card" style="margin-top:16px">
-      <div class="panel-card-title">Client Task Load</div>
-      <table class="data-table">
-        <thead><tr><th>Client</th><th style="text-align:center">Total</th><th style="text-align:center">Open</th><th style="text-align:center">High Priority</th></tr></thead>
-        <tbody>${clientRows}</tbody>
-      </table>
-    </div>
-  </div>`;
+function renderOpsStaff(tasks) {
+  let out = '';
+  CA_STAFF.forEach(s => {
+    const gt      = tasks.filter(t => t.assignedTo === s.id);
+    const gOpen   = gt.filter(t => t.status !== 'completed').length;
+    const gOver   = gt.filter(t => t.status !== 'completed' && t.dueDate < TODAY).length;
+    const gHigh   = gt.filter(t => t.priority === 'high' && t.status !== 'completed').length;
+    const estHrs  = gt.reduce((sum, t) => sum + (t.estHours || 0), 0);
+    const roleColor = s.role === 'SCA' ? '#0C2340' : s.role === 'CA' ? '#B8923C' : '#6B8FAF';
+    const hdr = `
+    <div class="ops-group-header" style="border-left:3px solid ${roleColor}">
+      <span class="ops-group-name">
+        <span class="ops-avatar-chip" style="background:${roleColor};color:#fff;margin-right:8px">${s.initials}</span>
+        ${s.name} <span style="color:var(--text-muted);font-weight:400;font-size:12px">${s.role}</span>
+      </span>
+      <span class="ops-group-chips">
+        ${gt.length ? `<span class="ops-group-chip">${gt.length} task${gt.length!==1?'s':''}</span>` : ''}
+        ${gOpen  ? `<span class="ops-group-chip ops-chip-open">${gOpen} open</span>` : ''}
+        ${gOver  ? `<span class="ops-group-chip ops-chip-overdue">${gOver} overdue</span>` : ''}
+        ${gHigh  ? `<span class="ops-group-chip ops-chip-high">${gHigh} high pri</span>` : ''}
+        ${gt.length ? `<span class="ops-group-chip">${estHrs.toFixed(1)}h est.</span>` : ''}
+      </span>
+    </div>`;
+    if (!gt.length) {
+      out += hdr + `<div class="ops-empty-group">No tasks assigned</div>`;
+    } else {
+      out += hdr + `<table class="ops-task-table">
+        <thead><tr><th></th><th>Task</th><th>Type</th><th>Client</th><th>Due</th><th></th></tr></thead>
+        <tbody>${gt.map(t => {
+          const sm = STATUS_META[t.status] || STATUS_META.pending;
+          const pm = PRIORITY_META[t.priority] || PRIORITY_META.medium;
+          const tm = CA_TASK_TYPES[t.type] || CA_TASK_TYPES.general;
+          const isOver = t.status !== 'completed' && t.dueDate < TODAY;
+          const isDone = t.status === 'completed';
+          const cname  = (clients.find(x => x.id === t.clientId) || {displayName:'Unknown'}).displayName.split(' ')[1];
+          return `<tr class="ops-task-row${isOver?' ops-row-overdue':''}${isDone?' ops-row-done':''}" data-task-id="${t.id}">
+            <td class="ops-row-status"><span class="ops-status-dot" style="background:${sm.color}" title="${sm.label}"></span></td>
+            <td class="ops-row-title"><span class="ops-row-task-title">${t.title}</span><span class="ops-row-sub">${t.subType}</span></td>
+            <td class="ops-row-type"><span class="ops-type-chip" style="border-color:${tm.color};color:${tm.color}">${tm.label}</span></td>
+            <td class="ops-row-client">${cname}</td>
+            <td class="ops-row-due${isOver?' overdue-text':''}">${isDone?'<span style="color:var(--text-muted)">Done</span>':t.dueDate}${isOver?'<span class="ops-overdue-flag">!</span>':''}</td>
+            <td class="ops-row-priority"><span class="ops-pri-dot" style="background:${pm.color}" title="${pm.label}"></span></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+  });
+  return out;
 }
 
 // ─── MOBILE HELPERS ───────────────────────────────────────
