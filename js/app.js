@@ -497,12 +497,59 @@ let caTasks = [
 
 let caTasksNextId = 31;
 
-let opsView = 'action'; // 'action' | 'family' | 'type' | 'staff'
-let reportsTab = 'overview'; // 'overview' | 'relationship' | 'engagement' | 'profitability' | 'staffing'
+// ─── CLIENT MESSAGES (Inbox / Doc Intake) ─────────────────
+const clientMessages = [
+  { id:'msg001', clientId:1, type:'message',  subject:'Q1 Performance — Tech Allocation Question',
+    body:'Hi Jonathan,\n\nI reviewed the Q1 statement and had a few questions about our tech weighting. The Apple and Microsoft positions seem to have lagged the index — are we still comfortable with the concentration? Should we be thinking about trimming into strength before summer?\n\nAlso, Sarah and I will be in NYC next month and would love to schedule a sit-down if your calendar allows.',
+    date:'2026-04-20', read:false, priority:'normal', status:'unread', attachments:[], tags:['portfolio','review'] },
+
+  { id:'msg002', clientId:4, type:'document', subject:'Uploaded: Divorce Settlement Agreement (Final)',
+    body:'Jonathan —\n\nMy attorney finally sent over the finalized settlement documents. Uploading here for your records. We really need to talk through the account restructuring implications as soon as possible. Elizabeth is being difficult about the joint brokerage timeline and my attorney says we need to move faster.\n\nPlease review and call me when you can.',
+    date:'2026-04-19', read:false, priority:'urgent', status:'unread',
+    attachments:[{ name:'Settlement_Agreement_Final.pdf', size:'3.2 MB', category:'Legal' },{ name:'Asset_Division_Schedule.pdf', size:'1.1 MB', category:'Legal' }], tags:['legal','divorce','urgent'] },
+
+  { id:'msg003', clientId:6, type:'document', subject:'FBAR Supporting Documents — UBS + CS Accounts',
+    body:'Uploading the foreign account statements you requested for the FBAR filing. Both accounts are included. Please note the Credit Suisse account was closed in November per our earlier conversation.\n\nI will be in Geneva through May 5th — please email if you need anything further.',
+    date:'2026-04-18', read:false, priority:'urgent', status:'unread',
+    attachments:[{ name:'UBS_Account_Statement_2025.pdf', size:'2.8 MB', category:'Tax' },{ name:'Credit_Suisse_Closure_Confirmation.pdf', size:'0.9 MB', category:'Tax' }], tags:['compliance','FBAR','urgent'] },
+
+  { id:'msg004', clientId:7, type:'message',  subject:'RSU Vest — Tax Strategy Before I Sell',
+    body:'Jonathan,\n\nThe April 15th vest hit — 3,200 shares of VRTX at $412/share. My broker is saying I should sell immediately for tax simplicity but I want your view before doing anything.\n\nWhat was the 60-day hold strategy you mentioned last quarter? And can you send an updated portfolio summary over to my CPA? He has been asking for it for two weeks.',
+    date:'2026-04-17', read:true, priority:'normal', status:'read', attachments:[], tags:['RSU','tax','equity'] },
+
+  { id:'msg005', clientId:3, type:'message',  subject:"Connor's Graduation — 529 and New Account Questions",
+    body:"Hi Jonathan, Sarah Morrison here.\n\nConnor's Yale graduation is May 18th and we are finalizing everything. Two quick questions:\n\n1) Is it too late to increase the 529 contribution for 2026 before the deadline? You mentioned the annual gift tax exclusion last time and I want to make sure we max it out.\n\n2) Connor is asking about opening his own investment account — he is very interested in tech stocks. Is that something Gold Capital handles for young adults just starting out?",
+    date:'2026-04-16', read:true, priority:'normal', status:'replied', attachments:[], tags:['529','family','new-account'] },
+
+  { id:'msg006', clientId:5, type:'document', subject:'Henry Augustine — Birth Certificate & SSN Letter',
+    body:"Tom here.\n\nFinally got Henry's official documents sorted — attaching the birth certificate and the Social Security Administration letter. Per our last call, please begin the process to add him to the family trust as a beneficiary.\n\nMargaret and I are absolutely over the moon. Thank you for your continued help navigating all of this!",
+    date:'2026-04-15', read:true, priority:'normal', status:'task_created',
+    attachments:[{ name:'Henry_Augustine_Birth_Certificate.pdf', size:'0.4 MB', category:'Estate' },{ name:'SSA_Letter_Henry_Augustine.pdf', size:'0.2 MB', category:'Estate' }], tags:['estate','trust','beneficiary'] },
+
+  { id:'msg007', clientId:2, type:'message',  subject:"Estate Planning — Attorney Referral Needed Urgently",
+    body:"Jonathan,\n\nFollowing up on our last call. Eleanor's health situation has made the estate restructuring quite urgent — we need to move faster than originally planned. Do you have a referral for a good estate attorney, preferably one who knows both Arizona and California implications?\n\nWe would like to get documents updated within the next 60 days if at all possible.",
+    date:'2026-04-14', read:true, priority:'normal', status:'read', attachments:[], tags:['estate','referral'] },
+
+  { id:'msg008', clientId:8, type:'message',  subject:'April Income Distribution — Confirm Receipt',
+    body:'Jonathan,\n\nJust making sure you received my note last week about the April distribution. The $12,000 should hit our joint checking by the 5th per the usual schedule.\n\nSeparately, Dorothy has been asking about a gifting strategy for the grandchildren — specifically whether we should be using 529s or direct gifts. Can we add that to our next call agenda?',
+    date:'2026-04-13', read:true, priority:'normal', status:'archived', attachments:[], tags:['distribution','income','gifting'] },
+];
+let msgNextId = 9;
+
+function updateMessage(id, changes) {
+  const m = clientMessages.find(x => x.id === id);
+  if (m) Object.assign(m, changes);
+}
+
+let opsView = 'action';
+let reportsTab = 'overview';
 let opsFilters = { assignee: 'all', status: 'all' };
 let opsSelectedTask = null;
 let showNewTaskModal = false;
 let newTaskDraft = { clientId: '', type: 'cash', subType: '', title: '', assignedTo: '', priority: 'medium', dueDate: '', estHours: '', recurring: false, notes: '' };
+let inboxFilter = 'all'; // 'all' | 'unread' | 'documents' | 'urgent'
+let inboxSelectedId = null;
+let notifPanelOpen = false;
 
 // ─── ROUTER ───────────────────────────────────────────────
 function parseRoute() {
@@ -512,7 +559,7 @@ function parseRoute() {
     state.view = 'client';
     state.clientId = parseInt(parts[1]);
     state.activeTab = 'overview';
-  } else if (['calendar', 'tasks', 'reports', 'operations'].includes(parts[0])) {
+  } else if (['calendar', 'tasks', 'reports', 'operations', 'inbox'].includes(parts[0])) {
     state.view = parts[0];
     state.clientId = null;
   } else {
@@ -551,6 +598,20 @@ function getFilteredClients() {
 }
 
 // ─── SIDEBAR ──────────────────────────────────────────────
+// ─── HEADER END (bell + avatar — shared across all views) ─
+function headerEnd() {
+  const unread = clientMessages.filter(m => !m.read).length;
+  const BELL = `<svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.5 2a4.5 4.5 0 0 1 4.5 4.5V9l1.5 2.5h-12L4 9V6.5A4.5 4.5 0 0 1 8.5 2z"/>
+    <path d="M6.5 11.5a2 2 0 0 0 4 0"/>
+  </svg>`;
+  return `<button class="notif-bell${unread > 0 ? ' has-unread' : ''}" data-notif-toggle title="Inbox (${unread} unread)">
+    ${BELL}
+    ${unread > 0 ? `<span class="notif-bell-badge">${unread}</span>` : ''}
+  </button>
+  ${headerEnd()}`;
+}
+
 function renderSidebar() {
   const totalAUM = clients.reduce((s, c) => s + c.aum, 0);
   const openTasks = clients.reduce((s, c) => s + c.openTasks, 0);
@@ -583,6 +644,10 @@ function renderSidebar() {
         <button class="nav-item ${state.view==='tasks'?'active':''}" data-nav="tasks">
           <span class="nav-icon">${NAV_ICONS.tasks}</span>Tasks
           ${openTasks > 0 ? `<span class="nav-badge">${openTasks}</span>` : ''}
+        </button>
+        <button class="nav-item ${state.view==='inbox'?'active':''}" data-nav="inbox">
+          <span class="nav-icon">${NAV_ICONS.inbox}</span>Inbox
+          ${clientMessages.filter(m=>!m.read).length > 0 ? `<span class="nav-badge nav-badge--gold">${clientMessages.filter(m=>!m.read).length}</span>` : ''}
         </button>
         <button class="nav-item ${state.view==='reports'?'active':''}" data-nav="reports">
           <span class="nav-icon">${NAV_ICONS.reports}</span>Reports
@@ -732,7 +797,7 @@ function renderCalendarView() {
     ${menuBtn}
     <div class="header-title">Calendar</div>
     <div class="header-spacer"></div>
-    <div class="header-avatar">${advisor.initials}</div>
+    ${headerEnd()}
   </div>
   <div class="main-content">
     <div class="calendar-layout">
@@ -791,7 +856,7 @@ function renderTasksView() {
     ${menuBtn}
     <div class="header-title">Tasks</div>
     <div class="header-spacer"></div>
-    <div class="header-avatar">${advisor.initials}</div>
+    ${headerEnd()}
   </div>
   <div class="main-content">
     <div class="stats-bar">
@@ -952,6 +1017,11 @@ const NAV_ICONS = {
     <line x1="1.5" y1="7" x2="3.3" y2="7"/><line x1="10.7" y1="7" x2="12.5" y2="7"/>
     <line x1="3" y1="3" x2="4.3" y2="4.3"/><line x1="9.7" y1="9.7" x2="11" y2="11"/>
     <line x1="11" y1="3" x2="9.7" y2="4.3"/><line x1="4.3" y1="9.7" x2="3" y2="11"/>
+  </svg>`,
+  inbox: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/>
+    <polyline points="1.5,8.5 4.5,8.5 5.5,10.5 8.5,10.5 9.5,8.5 12.5,8.5"/>
+    <line x1="4" y1="4.5" x2="10" y2="4.5"/><line x1="4" y1="6.5" x2="8" y2="6.5"/>
   </svg>`
 };
 
@@ -979,7 +1049,7 @@ function renderReportsView() {
     ${menuBtn}
     <div class="header-title">Reports</div>
     <div class="header-spacer"></div>
-    <div class="header-avatar">${advisor.initials}</div>
+    ${headerEnd()}
   </div>
   <div class="main-content">
     ${subNav}
@@ -1669,7 +1739,7 @@ function renderAdvisorView() {
     <div class="header-actions">
       <button class="header-btn primary">+ Log Touchpoint</button>
     </div>
-    <div class="header-avatar" title="${advisor.name}">${advisor.initials}</div>
+    ${headerEnd()}
   </div>
 
   <div class="main-content">
@@ -1859,7 +1929,7 @@ function renderClientView() {
       <button class="header-btn-text">Log Touchpoint</button>
       <button class="header-btn-text primary">+ Service Request</button>
     </div>
-    <div class="header-avatar">${advisor.initials}</div>
+    ${headerEnd()}
   </div>
 
   <div class="main-content">
@@ -1902,11 +1972,12 @@ function renderClientView() {
 
     <div class="client-tabs" id="tab-bar">
       ${[
-        { id: 'overview',      label: 'Overview',           badge: null },
-        { id: 'touchpoints',   label: 'Touchpoints',        badge: client.touchpoints.length },
-        { id: 'service',       label: 'Service',   badge: client.serviceRequests.filter(r=>r.status!=='completed').length || null },
-        { id: 'holdings',      label: 'Holdings',           badge: null },
-        { id: 'transactions',  label: 'Transactions',       badge: null }
+        { id: 'overview',      label: 'Overview',      badge: null },
+        { id: 'touchpoints',   label: 'Touchpoints',   badge: client.touchpoints.length },
+        { id: 'service',       label: 'Service',       badge: client.serviceRequests.filter(r=>r.status!=='completed').length || null },
+        { id: 'holdings',      label: 'Holdings',      badge: null },
+        { id: 'transactions',  label: 'Transactions',  badge: null },
+        { id: 'inbox',         label: 'Inbox',         badge: clientMessages.filter(m=>m.clientId===client.id&&!m.read).length || null }
       ].map(t => `
         <button class="tab-btn ${state.activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
           ${t.label}
@@ -1927,6 +1998,7 @@ function renderTabContent(client) {
     case 'service':       return renderServiceTab(client);
     case 'holdings':      return renderHoldingsTab(client);
     case 'transactions':  return renderTransactionsTab(client);
+    case 'inbox':         return renderClientInboxTab(client);
     default:              return renderOverviewTab(client);
   }
 }
@@ -3232,6 +3304,69 @@ function wireNewTaskModal() {
   });
 }
 
+// ─── NOTIFICATION PANEL ───────────────────────────────────
+function renderNotifPanelContent() {
+  const recent = [...clientMessages].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,10);
+  const unread = recent.filter(m => !m.read).length;
+  const BELL_FULL = `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M7.5 2a4 4 0 0 1 4 4V8.5L13 11H2L3.5 8.5V6a4 4 0 0 1 4-4z"/>
+    <path d="M6 11a1.5 1.5 0 0 0 3 0"/>
+  </svg>`;
+  return `
+  <div class="np-header">
+    <div class="np-title-row">
+      <span class="np-icon">${BELL_FULL}</span>
+      <span class="np-title">Inbox</span>
+      ${unread > 0 ? `<span class="np-unread-pill">${unread} new</span>` : ''}
+    </div>
+    <button class="np-close" data-notif-close>✕</button>
+  </div>
+  <div class="np-list">
+    ${recent.map(m => {
+      const c = msgClient(m);
+      const hc = c ? healthColor(c.healthScore) : 'green';
+      return `<div class="np-item${!m.read ? ' np-item--unread' : ''}" data-notif-open="${m.id}">
+        <div class="np-item-avatar ${hc}">${c ? c.initials : '?'}</div>
+        <div class="np-item-body">
+          <div class="np-item-top">
+            <span class="np-item-client">${c ? c.displayName.split(' ')[1] : '?'}</span>
+            <span class="np-item-date">${formatDateShort(m.date)}</span>
+          </div>
+          <div class="np-item-subject">${m.subject.slice(0,54)}${m.subject.length>54?'…':''}</div>
+          <div class="np-item-type">${MSG_TYPE_ICON[m.type]} ${m.type === 'document' ? 'Document' : 'Message'}${m.priority==='urgent'?' · <span style="color:#A83228;font-weight:700">Urgent</span>':''}</div>
+        </div>
+        ${!m.read ? '<div class="np-unread-dot"></div>' : ''}
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="np-footer">
+    <button class="np-view-all" data-notif-go-inbox>View all in Inbox →</button>
+  </div>`;
+}
+
+function openNotifPanel() {
+  let panel = document.getElementById('notif-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'notif-panel';
+    panel.className = 'notif-panel';
+    document.body.appendChild(panel);
+    const bd = document.createElement('div');
+    bd.id = 'notif-backdrop';
+    bd.className = 'notif-backdrop';
+    bd.addEventListener('click', closeNotifPanel);
+    document.body.appendChild(bd);
+  }
+  panel.innerHTML = renderNotifPanelContent();
+  panel.classList.add('open');
+  document.getElementById('notif-backdrop')?.classList.add('open');
+}
+
+function closeNotifPanel() {
+  document.getElementById('notif-panel')?.classList.remove('open');
+  document.getElementById('notif-backdrop')?.classList.remove('open');
+}
+
 // ── Global task event listener ─────────────────────────────
 function attachGlobalTaskListeners() {
   document.body.addEventListener('click', e => {
@@ -3274,7 +3409,238 @@ function attachGlobalTaskListeners() {
       openTaskPanel(card.getAttribute('data-task-id'));
       return;
     }
+
+    // Notification bell toggle
+    if (e.target.closest('[data-notif-toggle]')) {
+      const panel = document.getElementById('notif-panel');
+      if (panel?.classList.contains('open')) { closeNotifPanel(); } else { openNotifPanel(); }
+      return;
+    }
+
+    // Notification panel close
+    if (e.target.closest('[data-notif-close]')) { closeNotifPanel(); return; }
+
+    // Notification panel: go to inbox
+    if (e.target.closest('[data-notif-go-inbox]')) {
+      closeNotifPanel();
+      navigate('inbox');
+      return;
+    }
+
+    // Notification panel: open a specific message
+    const notifItem = e.target.closest('[data-notif-open]');
+    if (notifItem) {
+      const msgId = notifItem.getAttribute('data-notif-open');
+      updateMessage(msgId, { read: true, status: clientMessages.find(m=>m.id===msgId)?.status === 'unread' ? 'read' : clientMessages.find(m=>m.id===msgId)?.status });
+      inboxSelectedId = msgId;
+      closeNotifPanel();
+      navigate('inbox');
+      return;
+    }
+
+    // Message actions (reply, task, file, archive)
+    const msgActionBtn = e.target.closest('[data-msg-action]');
+    if (msgActionBtn) {
+      const [action, msgId] = msgActionBtn.getAttribute('data-msg-action').split(':');
+      const msg = clientMessages.find(m => m.id === msgId);
+      if (!msg) return;
+      if (action === 'archive') {
+        updateMessage(msgId, { status: 'archived', read: true });
+        if (inboxSelectedId === msgId) inboxSelectedId = null;
+        renderApp();
+      } else if (action === 'file') {
+        updateMessage(msgId, { status: 'task_created', read: true });
+        renderApp();
+      } else if (action === 'task') {
+        updateMessage(msgId, { status: 'task_created', read: true });
+        renderApp();
+      } else if (action === 'reply') {
+        updateMessage(msgId, { status: 'replied', read: true });
+        renderApp();
+      }
+      return;
+    }
   });
+}
+
+// ─── INBOX VIEW ───────────────────────────────────────────
+
+const MSG_TYPE_ICON = {
+  message:  `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="2" width="11" height="8" rx="1.5"/><polyline points="1,3 6.5,7.5 12,3"/></svg>`,
+  document: `<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2.5" y="1" width="8" height="11" rx="1.2"/><line x1="4.5" y1="4.5" x2="8.5" y2="4.5"/><line x1="4.5" y1="6.5" x2="8.5" y2="6.5"/><line x1="4.5" y1="8.5" x2="7" y2="8.5"/></svg>`
+};
+
+const MSG_STATUS_META = {
+  unread:       { label: 'Unread',       cls: 'status-unread'  },
+  read:         { label: 'Read',         cls: 'status-read'    },
+  replied:      { label: 'Replied',      cls: 'status-replied' },
+  task_created: { label: 'Task Created', cls: 'status-task'    },
+  archived:     { label: 'Archived',     cls: 'status-arch'    },
+};
+
+const FILE_ICON = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><rect x="1.5" y="0.5" width="9" height="11" rx="1"/><line x1="3.5" y1="4" x2="8.5" y2="4"/><line x1="3.5" y1="6" x2="8.5" y2="6"/><line x1="3.5" y1="8" x2="6.5" y2="8"/></svg>`;
+
+function msgClient(m) { return clients.find(c => c.id === m.clientId); }
+
+function renderMsgRow(m, selected) {
+  const c = msgClient(m);
+  const hc = c ? healthColor(c.healthScore) : 'green';
+  const isUrgent = m.priority === 'urgent';
+  return `<div class="inbox-msg-row${!m.read ? ' unread' : ''}${selected ? ' selected' : ''}${isUrgent ? ' urgent' : ''}" data-inbox-select="${m.id}">
+    <div class="imr-avatar ${hc}">${c ? c.initials : '?'}</div>
+    <div class="imr-body">
+      <div class="imr-top">
+        <span class="imr-client">${c ? c.displayName.split(' ')[1] : 'Unknown'}</span>
+        <span class="imr-date">${formatDateShort(m.date)}</span>
+      </div>
+      <div class="imr-subject">${isUrgent ? '<span class="imr-urgent-dot"></span>' : ''}${m.subject}</div>
+      <div class="imr-preview">${m.body.replace(/\n/g,' ').slice(0, 72)}…</div>
+      <div class="imr-meta-row">
+        <span class="imr-type-icon">${MSG_TYPE_ICON[m.type]}</span>
+        ${m.attachments.length > 0 ? `<span class="imr-attach-count">${m.attachments.length} attachment${m.attachments.length>1?'s':''}</span>` : ''}
+        <span class="imr-status ${MSG_STATUS_META[m.status]?.cls||''}">${MSG_STATUS_META[m.status]?.label||m.status}</span>
+      </div>
+    </div>
+    ${!m.read ? '<div class="imr-unread-dot"></div>' : ''}
+  </div>`;
+}
+
+function renderMsgDetail(m) {
+  const c = msgClient(m);
+  const hc = c ? healthColor(c.healthScore) : 'green';
+  const isUrgent = m.priority === 'urgent';
+  return `<div class="msg-detail">
+    <div class="msg-detail-header">
+      <div class="mdh-left">
+        <div class="mdh-avatar ${hc}">${c ? c.initials : '?'}</div>
+        <div class="mdh-info">
+          <div class="mdh-from">${c ? c.displayName : 'Unknown Client'}</div>
+          <div class="mdh-meta">${m.type === 'document' ? 'Document Upload' : 'Message'} · ${formatDate(m.date)}</div>
+        </div>
+      </div>
+      <div class="mdh-right">
+        ${isUrgent ? `<span class="msg-priority-badge urgent">Urgent</span>` : ''}
+        <span class="msg-status-badge ${MSG_STATUS_META[m.status]?.cls||''}">${MSG_STATUS_META[m.status]?.label||m.status}</span>
+      </div>
+    </div>
+
+    <div class="msg-subject">${m.subject}</div>
+
+    <div class="msg-body">${m.body.replace(/\n/g, '<br>')}</div>
+
+    ${m.attachments.length > 0 ? `
+    <div class="msg-attachments">
+      <div class="msg-attach-label">Attachments (${m.attachments.length})</div>
+      <div class="msg-attach-list">
+        ${m.attachments.map(a => `
+        <div class="msg-attach-card">
+          <span class="mac-icon">${FILE_ICON}</span>
+          <div class="mac-info">
+            <div class="mac-name">${a.name}</div>
+            <div class="mac-meta">${a.category} · ${a.size}</div>
+          </div>
+          <button class="mac-dl" title="Download">↓</button>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="msg-action-bar">
+      <button class="mab-btn mab-primary" data-msg-action="reply:${m.id}">↩ Reply</button>
+      <button class="mab-btn" data-msg-action="task:${m.id}">+ Create CA Task</button>
+      <button class="mab-btn" data-msg-action="file:${m.id}">📁 File to Record</button>
+      ${m.status !== 'archived' ? `<button class="mab-btn mab-ghost" data-msg-action="archive:${m.id}">Archive</button>` : ''}
+    </div>
+
+    ${m.tags.length > 0 ? `
+    <div class="msg-tags">
+      ${m.tags.map(t => `<span class="msg-tag">${t}</span>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+function renderInboxView() {
+  const allSorted = [...clientMessages].sort((a,b) => new Date(b.date) - new Date(a.date));
+  const filtered = allSorted.filter(m => {
+    if (inboxFilter === 'unread')     return !m.read;
+    if (inboxFilter === 'documents')  return m.type === 'document';
+    if (inboxFilter === 'urgent')     return m.priority === 'urgent';
+    return true;
+  });
+  const selected = inboxSelectedId ? clientMessages.find(m => m.id === inboxSelectedId) : null;
+  const unreadCt = clientMessages.filter(m => !m.read).length;
+  const urgentCt = clientMessages.filter(m => m.priority === 'urgent' && !m.read).length;
+
+  return `
+  <div class="main-header">
+    ${menuBtn}
+    <div class="header-title">Inbox</div>
+    <div class="header-spacer"></div>
+    ${headerEnd()}
+  </div>
+  <div class="inbox-shell">
+    <div class="inbox-rail">
+      <div class="inbox-rail-top">
+        <div class="inbox-summary">
+          <span class="inbox-summary-unread">${unreadCt} unread</span>
+          ${urgentCt > 0 ? `<span class="inbox-summary-urgent"> · ${urgentCt} urgent</span>` : ''}
+        </div>
+        <div class="inbox-filter-row">
+          <button class="ibf-btn${inboxFilter==='all'?      ' active':''}" data-inbox-filter="all">All</button>
+          <button class="ibf-btn${inboxFilter==='unread'?   ' active':''}" data-inbox-filter="unread">Unread${unreadCt>0?` <span class="ibf-ct">${unreadCt}</span>`:''}</button>
+          <button class="ibf-btn${inboxFilter==='documents'?' active':''}" data-inbox-filter="documents">Docs</button>
+          <button class="ibf-btn${inboxFilter==='urgent'?   ' active':''}" data-inbox-filter="urgent">Urgent</button>
+        </div>
+      </div>
+      <div class="inbox-list">
+        ${filtered.length === 0
+          ? `<div class="inbox-list-empty">No messages match this filter</div>`
+          : filtered.map(m => renderMsgRow(m, m.id === inboxSelectedId)).join('')}
+      </div>
+    </div>
+
+    <div class="inbox-detail-pane">
+      ${selected
+        ? renderMsgDetail(selected)
+        : `<div class="inbox-detail-empty">
+            <div class="ide-icon">${MSG_TYPE_ICON.message}</div>
+            <div class="ide-title">Select a message</div>
+            <div class="ide-sub">${filtered.length} message${filtered.length!==1?'s':''} · ${unreadCt} unread</div>
+           </div>`}
+    </div>
+  </div>`;
+}
+
+function renderClientInboxTab(client) {
+  const msgs = [...clientMessages]
+    .filter(m => m.clientId === client.id)
+    .sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  if (msgs.length === 0) return `
+    <div class="panel-card" style="margin-top:16px">
+      <div class="panel-title">Client Inbox</div>
+      <div class="r-empty">No messages or documents from ${client.displayName.split(' ')[1]} yet.</div>
+    </div>`;
+
+  const selectedMsg = inboxSelectedId ? msgs.find(m => m.id === inboxSelectedId) : null;
+
+  return `
+  <div class="client-inbox-shell">
+    <div class="client-inbox-list panel-card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 18px 10px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:10px">
+        <div class="panel-title" style="margin:0">Inbox</div>
+        <span style="font-size:11px;color:var(--text-muted)">${msgs.length} message${msgs.length!==1?'s':''} · ${msgs.filter(m=>!m.read).length} unread</span>
+      </div>
+      ${msgs.map(m => renderMsgRow(m, m.id === inboxSelectedId)).join('')}
+    </div>
+    <div class="client-inbox-detail">
+      ${selectedMsg
+        ? renderMsgDetail(selectedMsg)
+        : `<div class="inbox-detail-empty" style="height:300px">
+             <div class="ide-icon">${MSG_TYPE_ICON.message}</div>
+             <div class="ide-title">Select a message to read</div>
+           </div>`}
+    </div>
+  </div>`;
 }
 
 function renderOperationsView() {
@@ -3488,10 +3854,11 @@ const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label=
 function renderApp() {
   const sidebar = renderSidebar();
   const viewMap = {
-    advisor:  renderAdvisorView,
-    client:   renderClientView,
+    advisor:    renderAdvisorView,
+    client:     renderClientView,
     calendar:   renderCalendarView,
     tasks:      renderTasksView,
+    inbox:      renderInboxView,
     reports:    renderReportsView,
     operations: renderOperationsView
   };
@@ -3648,6 +4015,24 @@ function attachEventListeners() {
     const reportTabBtn = e.target.closest('[data-report-tab]');
     if (reportTabBtn) {
       reportsTab = reportTabBtn.getAttribute('data-report-tab');
+      renderApp(); return;
+    }
+
+    // Inbox filter
+    const ibfBtn = e.target.closest('[data-inbox-filter]');
+    if (ibfBtn) {
+      inboxFilter = ibfBtn.getAttribute('data-inbox-filter');
+      inboxSelectedId = null;
+      renderApp(); return;
+    }
+
+    // Inbox message select
+    const msgRow = e.target.closest('[data-inbox-select]');
+    if (msgRow && !e.target.closest('[data-msg-action]')) {
+      const msgId = msgRow.getAttribute('data-inbox-select');
+      inboxSelectedId = msgId;
+      const msg = clientMessages.find(m => m.id === msgId);
+      if (msg && !msg.read) updateMessage(msgId, { read: true, status: msg.status === 'unread' ? 'read' : msg.status });
       renderApp(); return;
     }
   });
