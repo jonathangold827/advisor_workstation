@@ -609,7 +609,7 @@ function headerEnd() {
     ${BELL}
     ${unread > 0 ? `<span class="notif-bell-badge">${unread}</span>` : ''}
   </button>
-  ${headerEnd()}`;
+  <div class="header-avatar" title="${advisor.name}">${advisor.initials}</div>`;
 }
 
 function renderSidebar() {
