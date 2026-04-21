@@ -574,15 +574,23 @@ function renderSidebar() {
       </div>
       <nav class="sidebar-nav">
         <div class="nav-label">Workspace</div>
-        <button class="nav-item ${state.view==='advisor'?'active':''}" data-nav="advisor">Book of Business</button>
-        <button class="nav-item ${state.view==='calendar'?'active':''}" data-nav="calendar">Calendar</button>
+        <button class="nav-item ${state.view==='advisor'?'active':''}" data-nav="advisor">
+          <span class="nav-icon">${NAV_ICONS.advisor}</span>Book of Business
+        </button>
+        <button class="nav-item ${state.view==='calendar'?'active':''}" data-nav="calendar">
+          <span class="nav-icon">${NAV_ICONS.calendar}</span>Calendar
+        </button>
         <button class="nav-item ${state.view==='tasks'?'active':''}" data-nav="tasks">
-          Tasks
+          <span class="nav-icon">${NAV_ICONS.tasks}</span>Tasks
           ${openTasks > 0 ? `<span class="nav-badge">${openTasks}</span>` : ''}
         </button>
-        <button class="nav-item ${state.view==='reports'?'active':''}" data-nav="reports">Reports</button>
+        <button class="nav-item ${state.view==='reports'?'active':''}" data-nav="reports">
+          <span class="nav-icon">${NAV_ICONS.reports}</span>Reports
+        </button>
         <div class="nav-label" style="margin-top:12px">Operations</div>
-        <button class="nav-item ${state.view==='operations'?'active':''}" data-nav="operations">CA Task Dashboard</button>
+        <button class="nav-item ${state.view==='operations'?'active':''}" data-nav="operations">
+          <span class="nav-icon">${NAV_ICONS.operations}</span>CA Task Dashboard
+        </button>
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-stat-row">
@@ -868,6 +876,85 @@ function rInsight(label, value, sub='', color='var(--primary)') {
   </div>`;
 }
 
+// ── SVG visualization helpers ─────────────────────────────
+
+function miniRing(score, size = 44) {
+  const r = (size / 2) - 4.5;
+  const cx = size / 2, cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const filled = circ * (score / 10);
+  const color = score >= 7.5 ? '#1E7A52' : score >= 5.5 ? '#A87020' : '#A83228';
+  const track = score >= 7.5 ? '#C0E8D2' : score >= 5.5 ? '#F0DDBA' : '#F0C8C4';
+  return `<svg class="mini-ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-label="Health ${score}">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${track}" stroke-width="3.5"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="3.5"
+      stroke-dasharray="${filled.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"
+      transform="rotate(-90 ${cx} ${cy})"/>
+    <text x="${cx}" y="${cy + 0.5}" dominant-baseline="middle" text-anchor="middle"
+      font-size="11" font-weight="700" fill="${color}" font-family="-apple-system,BlinkMacSystemFont,sans-serif">${score.toFixed(1)}</text>
+  </svg>`;
+}
+
+function svgBarH(pct, color = '#0C2340', w = 100, h = 5) {
+  const filled = Math.max(2, Math.min(pct, 100) * w / 100);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block;flex-shrink:0">
+    <rect width="${w}" height="${h}" rx="${h / 2}" fill="#E0D8CC"/>
+    <rect width="${filled.toFixed(1)}" height="${h}" rx="${h / 2}" fill="${color}"/>
+  </svg>`;
+}
+
+function svgDonutSegments(slices, size = 80, strokeW = 10) {
+  const r = (size / 2) - strokeW;
+  const cx = size / 2, cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const total = slices.reduce((s, sl) => s + sl.value, 0);
+  if (total === 0) return '';
+  let offset = 0;
+  const paths = slices.map(sl => {
+    const pct = sl.value / total;
+    const dash = circ * pct - 1.5;
+    const path = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${sl.color}" stroke-width="${strokeW}"
+      stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-dashoffset="${(-offset * circ + circ * 0.25).toFixed(1)}"
+      stroke-linecap="butt"/>`;
+    offset += pct;
+    return path;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" class="svg-donut-mini">${paths.join('')}</svg>`;
+}
+
+// NAV ICONS
+const NAV_ICONS = {
+  advisor: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1" y="1" width="5" height="5" rx=".8"/><rect x="8" y="1" width="5" height="5" rx=".8"/>
+    <rect x="1" y="8" width="5" height="5" rx=".8"/><rect x="8" y="8" width="5" height="5" rx=".8"/>
+  </svg>`,
+  calendar: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1.5" y="2.5" width="11" height="10" rx="1.5"/>
+    <line x1="1.5" y1="5.5" x2="12.5" y2="5.5"/>
+    <line x1="4.5" y1="1" x2="4.5" y2="4"/><line x1="9.5" y1="1" x2="9.5" y2="4"/>
+    <circle cx="4.5" cy="8.5" r=".6" fill="currentColor"/><circle cx="7" cy="8.5" r=".6" fill="currentColor"/>
+    <circle cx="9.5" cy="8.5" r=".6" fill="currentColor"/><circle cx="4.5" cy="11" r=".6" fill="currentColor"/>
+    <circle cx="7" cy="11" r=".6" fill="currentColor"/>
+  </svg>`,
+  tasks: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="1.5,3.5 3.5,5.5 6.5,2"/><line x1="8.5" y1="3.5" x2="12.5" y2="3.5"/>
+    <polyline points="1.5,7.5 3.5,9.5 6.5,6"/><line x1="8.5" y1="7.5" x2="12.5" y2="7.5"/>
+    <polyline points="1.5,11.5 3.5,13.5 6.5,10"/><line x1="8.5" y1="11.5" x2="12.5" y2="11.5"/>
+  </svg>`,
+  reports: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="1.5" y1="12.5" x2="12.5" y2="12.5"/>
+    <rect x="1.5" y="7.5" width="2.5" height="5" rx=".4"/><rect x="5.75" y="4.5" width="2.5" height="8" rx=".4"/>
+    <rect x="10" y="1.5" width="2.5" height="11" rx=".4"/>
+  </svg>`,
+  operations: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="7" cy="7" r="2.2"/>
+    <line x1="7" y1="1.5" x2="7" y2="3.3"/><line x1="7" y1="10.7" x2="7" y2="12.5"/>
+    <line x1="1.5" y1="7" x2="3.3" y2="7"/><line x1="10.7" y1="7" x2="12.5" y2="7"/>
+    <line x1="3" y1="3" x2="4.3" y2="4.3"/><line x1="9.7" y1="9.7" x2="11" y2="11"/>
+    <line x1="11" y1="3" x2="9.7" y2="4.3"/><line x1="4.3" y1="9.7" x2="3" y2="11"/>
+  </svg>`
+};
+
 function renderReportsView() {
   const subNav = `
   <div class="reports-sub-nav">
@@ -1061,11 +1148,7 @@ function renderRptRelationship() {
             <div class="data-table-sub">${c.tier} · ${c.ltvMetrics.tenureYears}yr tenure</div>
           </td>
           ${dims.map(d => `<td style="text-align:center">${rScoreChip(c.ltvMetrics[d.key], d.label)}</td>`).join('')}
-          <td style="text-align:center">
-            <span class="r-composite-chip" style="background:${rScoreBg(c.composite)};color:${rScoreColor(c.composite)}">
-              ${c.composite.toFixed(1)}
-            </span>
-          </td>
+          <td style="text-align:center">${miniRing(c.composite, 38)}</td>
           <td><div class="r-services-list">${c.ltvMetrics.servicesUsed.map(s => `<span class="r-service-tag">${s}</span>`).join('')}</div></td>
         </tr>`).join('')}
       </tbody>
@@ -1173,7 +1256,7 @@ function renderRptProfitability() {
           <td class="data-table-num">${formatCurrency(c.ltvMetrics.estimatedAnnualRevenue)}</td>
           <td style="min-width:140px">
             <div class="r-bar-with-label">
-              ${rBar(revPct, isConc ? '#0C2340' : '#6B8FAF')}
+              ${svgBarH(revPct, isConc ? '#0C2340' : '#6B8FAF', 110, 7)}
               <span class="r-bar-pct">${revPct.toFixed(1)}%</span>
             </div>
           </td>
@@ -1379,7 +1462,7 @@ function renderRptStaffing() {
       const meta = CA_TASK_TYPES[type];
       return `<div class="r-eng-row" style="margin-bottom:6px">
         <span class="r-eng-name data-table-primary">${meta ? meta.label : type}</span>
-        ${rBar(count/maxTypeCount*100, meta ? meta.color : 'var(--primary)')}
+        <div style="flex:1;padding:0 4px">${svgBarH(count/maxTypeCount*100, meta ? meta.color : 'var(--primary)', 130, 8)}</div>
         <span class="r-eng-count">${count} task${count!==1?'s':''}</span>
       </div>`;
     }).join('')}
@@ -1437,15 +1520,16 @@ function renderRptEngagement() {
       <div class="panel-title">Touchpoint Frequency <span class="panel-title-sub">Last 90 days — sorted by activity</span></div>
       ${tpLast90.map(({client: c, count, lastDays}) => {
         const isOver = lastDays > 60;
+        const barColor = rScoreColor(c.ltvMetrics.engagementScore);
         return `<div class="r-eng-row">
           <div class="r-eng-name">
-            <span class="data-table-primary">${c.displayName.split(' ')[1]}</span>
-            <span class="data-table-sub" style="color:${isOver?'#C0392B':'var(--text-muted)'}">
+            <div class="data-table-primary">${c.displayName.split(' ')[1]}</div>
+            <div class="data-table-sub" style="color:${isOver?'#C0392B':'var(--text-muted)'};font-size:10px">
               ${lastDays}d ago${isOver?' ⚠':''}
-            </span>
+            </div>
           </div>
-          ${rBar(count/maxTp*100, rScoreColor(c.ltvMetrics.engagementScore))}
-          <span class="r-eng-count">${count} contact${count!==1?'s':''}</span>
+          <div style="flex:1;padding:0 4px">${svgBarH(count/maxTp*100, barColor, 120, 7)}</div>
+          <span class="r-eng-count">${count}</span>
         </div>`;
       }).join('')}
     </div>
@@ -1455,7 +1539,7 @@ function renderRptEngagement() {
       ${tpTypeSorted.map(([type, count]) => `
       <div class="r-eng-row">
         <span class="data-table-primary r-eng-name">${tpTypeLabel[type] || type}</span>
-        ${rBar(count/allTp.length*100)}
+        <div style="flex:1;padding:0 4px">${svgBarH(count/allTp.length*100, 'var(--primary)', 120, 7)}</div>
         <span class="r-eng-count">${count}</span>
       </div>`).join('')}
 
@@ -1463,7 +1547,7 @@ function renderRptEngagement() {
       ${[...clients].sort((a,b)=>b.ltvMetrics.engagementScore-a.ltvMetrics.engagementScore).map(c => `
       <div class="r-eng-row">
         <span class="data-table-primary r-eng-name">${c.displayName.split(' ')[1]}</span>
-        ${rBar(c.ltvMetrics.engagementScore*10, rScoreColor(c.ltvMetrics.engagementScore))}
+        <div style="flex:1;padding:0 4px">${svgBarH(c.ltvMetrics.engagementScore*10, rScoreColor(c.ltvMetrics.engagementScore), 120, 7)}</div>
         ${rScoreChip(c.ltvMetrics.engagementScore)}
       </div>`).join('')}
     </div>
@@ -1556,6 +1640,23 @@ function renderAdvisorView() {
 
   const filtered = getFilteredClients();
 
+  // Portfolio pulse data
+  const thriving = clients.filter(c => c.healthLabel === 'Thriving');
+  const nurture  = clients.filter(c => c.healthLabel === 'Nurture');
+  const atRisk   = clients.filter(c => c.healthLabel === 'At Risk');
+  const overdue  = clients.filter(c => daysSince(c.lastTouchpoint.date) > 60);
+  const thrivingAUM = thriving.reduce((s,c) => s+c.aum,0);
+  const nurtureAUM  = nurture.reduce((s,c) => s+c.aum,0);
+  const atRiskAUM   = atRisk.reduce((s,c) => s+c.aum,0);
+
+  const healthDonut = svgDonutSegments([
+    { value: thriving.length, color: '#1E7A52' },
+    { value: nurture.length,  color: '#A87020' },
+    { value: atRisk.length,   color: '#A83228' }
+  ], 88, 12);
+
+  const totalRev = clients.reduce((s,c) => s+c.ltvMetrics.estimatedAnnualRevenue,0);
+
   return `
   <div class="main-header">
     ${menuBtn}
@@ -1573,25 +1674,66 @@ function renderAdvisorView() {
 
   <div class="main-content">
     <div class="stats-bar">
-      <div class="stat-card">
+      <div class="stat-card stat-card--primary">
+        <div class="stat-card-icon">
+          ${NAV_ICONS.advisor}
+        </div>
         <div class="stat-label">Total AUM</div>
         <div class="stat-value">${formatCurrency(totalAUM)}</div>
-        <div class="stat-sub">across ${clients.length} client relationships</div>
+        <div class="stat-sub">${clients.length} client relationships</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card--gold">
+        <div class="stat-card-icon">${NAV_ICONS.reports}</div>
+        <div class="stat-label">Annual Revenue</div>
+        <div class="stat-value">${formatCurrency(totalRev)}</div>
+        <div class="stat-sub">${((totalRev/totalAUM)*100).toFixed(2)}% blended fee</div>
+      </div>
+      <div class="stat-card stat-card--${parseFloat(avgHealth) >= 7.5 ? 'green' : parseFloat(avgHealth) >= 5.5 ? 'amber' : 'red'}">
+        <div class="stat-card-icon">${miniRing(parseFloat(avgHealth), 32)}</div>
+        <div class="stat-label">Avg Health Score</div>
+        <div class="stat-value">${avgHealth}<span style="font-size:14px;font-weight:400;opacity:.5">/10</span></div>
+        <div class="stat-sub">LTV-weighted across book</div>
+      </div>
+      <div class="stat-card stat-card--${totalTasks > 10 ? 'amber' : 'neutral'}">
+        <div class="stat-card-icon">${NAV_ICONS.tasks}</div>
         <div class="stat-label">Open Tasks</div>
         <div class="stat-value">${totalTasks}</div>
-        <div class="stat-sub">service requests & follow-ups</div>
+        <div class="stat-sub">${upcoming} milestones next 30d${overdue.length > 0 ? ` · <span style="color:var(--red)">${overdue.length} overdue contact</span>` : ''}</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Avg Health Score</div>
-        <div class="stat-value">${avgHealth}<span style="font-size:14px;font-weight:400;color:var(--text-2)">/10</span></div>
-        <div class="stat-sub">LTV-weighted relationship health</div>
+    </div>
+
+    <div class="portfolio-pulse">
+      <div class="pp-donut">${healthDonut}
+        <div class="pp-donut-label"><div style="font-size:18px;font-weight:700;color:var(--primary)">${clients.length}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px">Clients</div></div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Upcoming Moments</div>
-        <div class="stat-value">${upcoming}</div>
-        <div class="stat-sub">milestones in next 30 days</div>
+      <div class="pp-segments">
+        <div class="pp-seg pp-seg--green">
+          <div class="pp-seg-bar" style="width:${(thriving.length/clients.length*100).toFixed(0)}%"></div>
+          <div class="pp-seg-info">
+            <span class="pp-seg-label">Thriving</span>
+            <span class="pp-seg-count">${thriving.length} clients · ${formatCurrency(thrivingAUM)}</span>
+          </div>
+        </div>
+        <div class="pp-seg pp-seg--amber">
+          <div class="pp-seg-bar" style="width:${(nurture.length/clients.length*100).toFixed(0)}%"></div>
+          <div class="pp-seg-info">
+            <span class="pp-seg-label">Nurture</span>
+            <span class="pp-seg-count">${nurture.length} clients · ${formatCurrency(nurtureAUM)}</span>
+          </div>
+        </div>
+        ${atRisk.length > 0 ? `<div class="pp-seg pp-seg--red">
+          <div class="pp-seg-bar" style="width:${(atRisk.length/clients.length*100).toFixed(0)}%"></div>
+          <div class="pp-seg-info">
+            <span class="pp-seg-label">At Risk</span>
+            <span class="pp-seg-count">${atRisk.length} clients · ${formatCurrency(atRiskAUM)}</span>
+          </div>
+        </div>` : ''}
+      </div>
+      <div class="pp-divider"></div>
+      <div class="pp-quick-stats">
+        <div class="pp-qs"><div class="pp-qs-val">${((thrivingAUM/totalAUM)*100).toFixed(0)}%</div><div class="pp-qs-label">AUM Thriving</div></div>
+        <div class="pp-qs"><div class="pp-qs-val">${overdue.length}</div><div class="pp-qs-label">Overdue Contact</div></div>
+        <div class="pp-qs"><div class="pp-qs-val">${clients.filter(c=>c.upcomingMilestones.some(m=>{ const d=daysUntil(m.date); return d>=0&&d<=14; })).length}</div><div class="pp-qs-label">Moments (14d)</div></div>
       </div>
     </div>
 
@@ -1637,6 +1779,9 @@ function renderClientCard(client) {
   const openSR = client.serviceRequests.filter(r => r.status !== 'completed').length;
   const hc = healthColor(client.healthScore);
   const du = nextMilestone ? daysUntil(nextMilestone.date) : null;
+  const maxAUM = Math.max(...clients.map(c => c.aum));
+  const aumPct = (client.aum / maxAUM * 100).toFixed(1);
+  const aumBarColor = client.aumGrowthYTD >= 0 ? '#1E7A52' : '#A83228';
 
   return `
   <div class="client-card" data-client-id="${client.id}">
@@ -1644,18 +1789,21 @@ function renderClientCard(client) {
     <div class="card-body">
 
       <div class="card-top-row">
-        <div class="card-name">${client.displayName}</div>
-        <span class="tier-badge ${tierClass(client.tier)}">${tierLabel(client.tier)}</span>
+        <div class="card-name-block">
+          <div class="card-name">${client.displayName}</div>
+          <span class="tier-badge ${tierClass(client.tier)}">${tierLabel(client.tier)}</span>
+        </div>
+        <div class="card-ring-wrap">${miniRing(client.healthScore, 46)}</div>
       </div>
 
-      <div class="card-aum-row">
-        <span class="card-aum">${formatCurrency(client.aum)}</span>
-        <span class="card-aum-growth ${client.aumGrowthYTD >= 0 ? 'positive' : 'negative'}">
-          ${client.aumGrowthYTD >= 0 ? '+' : ''}${(client.aumGrowthYTD * 100).toFixed(1)}%
-        </span>
-        <span class="card-health-pill ${hc}">
-          <span class="health-dot ${hc}"></span>${client.healthScore}
-        </span>
+      <div class="card-aum-block">
+        <div class="card-aum-row">
+          <span class="card-aum">${formatCurrency(client.aum)}</span>
+          <span class="card-aum-growth ${client.aumGrowthYTD >= 0 ? 'positive' : 'negative'}">
+            ${client.aumGrowthYTD >= 0 ? '▲' : '▼'} ${Math.abs(client.aumGrowthYTD * 100).toFixed(1)}% YTD
+          </span>
+        </div>
+        <div class="card-aum-bar">${svgBarH(parseFloat(aumPct), aumBarColor, 180, 4)}</div>
       </div>
 
       <div class="card-metrics-row">
@@ -1670,7 +1818,7 @@ function renderClientCard(client) {
         </div>
         <div class="card-metric-divider"></div>
         <div class="card-metric">
-          <div class="metric-label">Service Requests</div>
+          <div class="metric-label">Service Req</div>
           <div class="metric-value ${openSR > 1 ? 'overdue' : openSR > 0 ? 'nudge' : ''}">${openSR > 0 ? openSR + ' open' : 'None'}</div>
         </div>
       </div>
@@ -1685,7 +1833,7 @@ function renderClientCard(client) {
     </div>
     <div class="card-footer">
       <span class="card-footer-meta">${touchpointLabel(client.lastTouchpoint.type)} · ${formatDateShort(client.lastTouchpoint.date)}</span>
-      <button class="card-view-btn" data-client-id="${client.id}">View Profile</button>
+      <button class="card-view-btn" data-client-id="${client.id}">View Profile →</button>
     </div>
   </div>`;
 }
