@@ -19,7 +19,17 @@ export const advisor = {
   name: 'Sarah Mitchell',
   title: 'Senior Wealth Advisor',
   initials: 'SM',
-  firm: 'Gold Capital'
+  firm: 'Gold Capital',
+  wire: {
+    receivingBank:   'First National Custodial Bank',
+    abaRouting:      '021000089',
+    swiftCode:       'FNCBUS33XXX',
+    firmAccountName: 'Gold Capital Advisors LLC',
+    firmAccountNum:  '4471-0099-334',
+    dtc:             '0226',
+    phone:           '(415) 555-0100',
+    address:         '100 Market Street, Suite 800, San Francisco, CA 94105'
+  }
 };
 
 export const clients = [
@@ -85,7 +95,11 @@ export const clients = [
     serviceRequests: [
       { id: 'sr1', type: 'Tax Document', title: 'Q1 2026 K-1 Statements', status: 'open', priority: 'high', createdDate: daysAgo(26), dueDate: daysFromNow(19), notes: 'Client needs K-1s for KKR and Blackstone for tax filing. CPA deadline April 15.' },
       { id: 'sr2', type: 'Investment Change', title: 'Increase PE Allocation — $10M', status: 'in_progress', priority: 'medium', createdDate: daysAgo(7), dueDate: daysFromNow(35), notes: 'Evaluating Apollo Fund VIII and Carlyle Partners VII. Confirm capital call schedule.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Harrington Family Trust',
+      accountNum:  'GC-2015-001-HFT'
+    }
   },
 
   // ── 2. WHITFIELD ──────────────────────────────────────────
@@ -147,7 +161,11 @@ export const clients = [
       { id: 'sr1', type: 'Estate Planning', title: 'Trust Restructuring — Post Harold', status: 'in_progress', priority: 'high', createdDate: daysAgo(90), dueDate: daysFromNow(14), notes: 'Estate attorney drafting amended trust documents. Three beneficiary branches need coordination.' },
       { id: 'sr2', type: 'Account Change', title: 'Account Re-registration to Surviving Spouse', status: 'awaiting_client', priority: 'high', createdDate: daysAgo(60), dueDate: daysFromNow(7), notes: 'Awaiting Margaret\'s signature on re-registration forms. Sent twice via DocuSign.' },
       { id: 'sr3', type: 'Document Request', title: 'Annual Tax Documents — 2025', status: 'open', priority: 'medium', createdDate: daysAgo(20), dueDate: daysFromNow(19), notes: 'Coordinate with CPA Patricia Moore on 1099s and K-1s.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Whitfield Revocable Trust',
+      accountNum:  'GC-2008-002-WRT'
+    }
   },
 
   // ── 3. MORRISON ───────────────────────────────────────────
@@ -206,7 +224,11 @@ export const clients = [
     ],
     serviceRequests: [
       { id: 'sr1', type: 'Account Change', title: "Increase 529 Contribution — Connor", status: 'open', priority: 'medium', createdDate: daysAgo(10), dueDate: daysFromNow(30), notes: 'Max contribution for 2026 before Connor graduates. Confirm gift tax exclusion.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Morrison Joint Account',
+      accountNum:  'GC-2019-003-MJA'
+    }
   },
 
   // ── 4. BANCROFT ───────────────────────────────────────────
@@ -268,7 +290,11 @@ export const clients = [
       { id: 'sr2', type: 'Document Request', title: '2025 Tax Documents — Post-Divorce', status: 'open', priority: 'high', createdDate: daysAgo(25), dueDate: daysFromNow(19), notes: 'CPA needs split-year documents. Coordinating with divorce attorney.' },
       { id: 'sr3', type: 'Investment Change', title: 'Consolidate Remaining Joint Accounts', status: 'in_progress', priority: 'medium', createdDate: daysAgo(40), dueDate: daysFromNow(21), notes: 'Transferring joint brokerage to individual account.' },
       { id: 'sr4', type: 'Estate Planning', title: 'Draft New Will & POA', status: 'open', priority: 'high', createdDate: daysAgo(30), dueDate: daysFromNow(30), notes: 'Existing will names William. Urgent to update.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Bancroft Individual Account',
+      accountNum:  'GC-2021-004-BIA'
+    }
   },
 
   // ── 5. AUGUSTINE ──────────────────────────────────────────
@@ -328,7 +354,11 @@ export const clients = [
     ],
     serviceRequests: [
       { id: 'sr1', type: 'Estate Planning', title: 'Add Grandchild to Family Trust', status: 'in_progress', priority: 'low', createdDate: daysAgo(20), dueDate: daysFromNow(45), notes: 'Add Henry Augustine (newborn) as trust beneficiary.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Augustine Family Trust III',
+      accountNum:  'GC-2012-005-AFT'
+    }
   },
 
   // ── 6. PETROV ─────────────────────────────────────────────
@@ -387,7 +417,11 @@ export const clients = [
       { id: 'sr1', type: 'Compliance', title: 'Annual FBAR Filing Documentation', status: 'open', priority: 'high', createdDate: daysAgo(45), dueDate: daysFromNow(14), notes: 'Required foreign account reporting. Awaiting documents from client. Deadline approaching.' },
       { id: 'sr2', type: 'Document Request', title: '2025 Tax Documents', status: 'open', priority: 'medium', createdDate: daysAgo(25), dueDate: daysFromNow(19), notes: 'Annual tax package. Client unresponsive to requests.' },
       { id: 'sr3', type: 'Account Review', title: 'Annual Review — OVERDUE', status: 'open', priority: 'high', createdDate: daysAgo(30), dueDate: daysAgo(0), notes: 'Annual review has not been scheduled. Last proper review was March 2025.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Petrov Capital LLC',
+      accountNum:  'GC-2020-006-PCL'
+    }
   },
 
   // ── 7. CHEN ───────────────────────────────────────────────
@@ -445,7 +479,11 @@ export const clients = [
     ],
     serviceRequests: [
       { id: 'sr1', type: 'Investment Change', title: 'RSU Vest Proceeds — Diversification Plan', status: 'in_progress', priority: 'high', createdDate: daysAgo(5), dueDate: daysFromNow(22), notes: 'Prepare allocation plan for $2.1M RSU proceeds. Reduce VRTX concentration to <40%. Present options by April 10.' }
-    ]
+    ],
+    wireInfo: {
+      accountName: 'Chen Investment Account',
+      accountNum:  'GC-2022-007-CIA'
+    }
   },
 
   // ── 8. SULLIVAN ───────────────────────────────────────────
@@ -503,7 +541,11 @@ export const clients = [
       { id: 'tp4', date: daysAgo(75), type: 'gift_sent', title: 'Holiday Gift — Scottsdale Sunset Dinner', notes: 'Arranged private sunset dinner at Troon North for George and Patricia. They called it the most special evening they have had in years.', sentiment: 'positive' },
       { id: 'tp5', date: daysAgo(105), type: 'phone_call', title: 'RMD Planning Call', notes: 'Walked through 2026 RMD strategy. Reviewed charitable giving options with Scottsdale Food Bank QCD.', sentiment: 'positive' }
     ],
-    serviceRequests: []
+    serviceRequests: [],
+    wireInfo: {
+      accountName: 'Sullivan Retirement Trust',
+      accountNum:  'GC-2010-008-SRT'
+    }
   }
 
 ]; // end clients

@@ -1974,6 +1974,7 @@ function renderClientView() {
     <div class="header-spacer"></div>
     <div class="header-actions">
       <button class="header-btn-text">Log Touchpoint</button>
+      <button class="header-btn-text" data-wire-instructions="${client.id}">⬇ Wire Instructions</button>
       <button class="header-btn-text primary">+ Service Request</button>
     </div>
     ${headerEnd()}
@@ -3897,6 +3898,80 @@ function renderOpsStaff(tasks) {
 // ─── MOBILE HELPERS ───────────────────────────────────────
 const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
 
+// ─── WIRE INSTRUCTIONS MODAL ──────────────────────────────
+function openWireModal(clientId) {
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return;
+  const w = advisor.wire;
+  const today = new Date(TODAY).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const existing = document.getElementById('wire-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'wire-modal-overlay';
+  overlay.className = 'wire-overlay';
+  overlay.innerHTML = `
+    <div class="wire-modal" role="dialog" aria-modal="true" aria-label="Wire Instructions">
+      <div class="wire-modal-header">
+        <div>
+          <div class="wire-modal-title">Wire Transfer Instructions</div>
+          <div class="wire-modal-sub">${client.displayName} · Generated ${today}</div>
+        </div>
+        <div class="wire-modal-actions">
+          <button class="wire-btn-print" id="wire-print-btn">Print / Save PDF</button>
+          <button class="wire-btn-close" id="wire-close-btn" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <div class="wire-doc" id="wire-doc">
+        <div class="wire-letterhead">
+          <div class="wire-lh-firm">${advisor.firm}</div>
+          <div class="wire-lh-meta">${advisor.name} · ${advisor.title}<br>${w.address}</div>
+        </div>
+
+        <h2 class="wire-doc-title">Incoming Wire Transfer Instructions</h2>
+        <p class="wire-doc-intro">Please use the following instructions to initiate a wire transfer to your Gold Capital account. Contact us with any questions before initiating the transfer.</p>
+
+        <div class="wire-section-label">Receiving Bank</div>
+        <table class="wire-table">
+          <tr><td class="wire-field">Bank Name</td><td class="wire-value">${w.receivingBank}</td></tr>
+          <tr><td class="wire-field">ABA / Routing Number</td><td class="wire-value wire-mono">${w.abaRouting}</td></tr>
+          <tr><td class="wire-field">SWIFT Code (International)</td><td class="wire-value wire-mono">${w.swiftCode}</td></tr>
+          <tr><td class="wire-field">DTC Number</td><td class="wire-value wire-mono">${w.dtc}</td></tr>
+        </table>
+
+        <div class="wire-section-label">Receiving Account</div>
+        <table class="wire-table">
+          <tr><td class="wire-field">Account Name</td><td class="wire-value">${w.firmAccountName}</td></tr>
+          <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${w.firmAccountNum}</td></tr>
+        </table>
+
+        <div class="wire-section-label">For Further Credit (FFC) — Client Account</div>
+        <table class="wire-table wire-table--highlight">
+          <tr><td class="wire-field">Account Name</td><td class="wire-value">${client.wireInfo.accountName}</td></tr>
+          <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${client.wireInfo.accountNum}</td></tr>
+          <tr><td class="wire-field">Reference / Memo</td><td class="wire-value">${client.lastName} · ${client.wireInfo.accountNum}</td></tr>
+        </table>
+
+        <div class="wire-note">
+          <strong>Important:</strong> Always include the FFC account name and number in your wire instructions. Wires received without the FFC reference may be delayed. For questions contact ${advisor.name} at ${w.phone}.
+        </div>
+
+        <div class="wire-footer">
+          ${advisor.firm} · ${w.address} · ${w.phone}<br>
+          Document generated ${today} · For client use only — do not distribute
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('wire-close-btn').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('wire-print-btn').addEventListener('click', () => window.print());
+}
+
 // ─── ANNOUNCEMENT BANNER ──────────────────────────────────
 function renderAnnouncementBanner() {
   const a = getActiveBanner();
@@ -3975,6 +4050,10 @@ function attachEventListeners() {
   const app = document.getElementById('app');
 
   app.addEventListener('click', e => {
+    // Wire instructions modal
+    const wireBtn = e.target.closest('[data-wire-instructions]');
+    if (wireBtn) { openWireModal(parseInt(wireBtn.getAttribute('data-wire-instructions'), 10)); return; }
+
     // Announcement banner dismiss
     const dismissBtn = e.target.closest('[data-dismiss-banner]');
     if (dismissBtn) { dismissBanner(dismissBtn.getAttribute('data-dismiss-banner')); renderApp(); return; }
