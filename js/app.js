@@ -716,6 +716,7 @@ function renderSidebar() {
           <span class="sidebar-stat-label">Open Tasks</span>
           <span class="sidebar-stat-value">${openTasks}</span>
         </div>
+        <button class="sidebar-ann-reset" data-reset-banners title="Reset dismissed announcements">↺ Announcements</button>
       </div>
     </aside>`;
   }
@@ -3977,6 +3978,13 @@ function attachEventListeners() {
     // Announcement banner dismiss
     const dismissBtn = e.target.closest('[data-dismiss-banner]');
     if (dismissBtn) { dismissBanner(dismissBtn.getAttribute('data-dismiss-banner')); renderApp(); return; }
+
+    // Reset all dismissed announcements
+    if (e.target.closest('[data-reset-banners]')) {
+      localStorage.removeItem('gc_dismissed_banners');
+      renderApp();
+      return;
+    }
 
     // Top-level nav
     const navBtn = e.target.closest('[data-nav]');
