@@ -95,6 +95,14 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 input  { font-family: var(--font); }
 a { text-decoration: none; color: inherit; }
 
+/* 3. APP ROOT */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
 /* 3. LOADING */
 .app-loading {
   display: flex; flex-direction: column;
@@ -123,7 +131,8 @@ a { text-decoration: none; color: inherit; }
 /* 4. APP SHELL */
 .app-shell {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -134,7 +143,7 @@ a { text-decoration: none; color: inherit; }
   background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 }
 .sidebar-brand {
@@ -2466,6 +2475,7 @@ a { text-decoration: none; color: inherit; }
 
 @media (max-width: 768px) {
   body { overflow: auto; }
+  #app { height: auto; min-height: 100vh; overflow: visible; }
 
   /* Make sidebar a fixed drawer */
   .sidebar {
@@ -3285,4 +3295,80 @@ a { text-decoration: none; color: inherit; }
 @media (max-width: 680px) {
   .inbox-shell { flex-direction: column; }
   .inbox-rail { width: 100%; height: 40vh; border-right: none; border-bottom: 1px solid var(--border-light); }
+}
+
+/* §29 ANNOUNCEMENT BANNER ──────────────────────────────── */
+.ann-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 20px;
+  min-height: 42px;
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  z-index: 50;
+}
+.ann-banner--info    { background: #EBF3FC; border-color: #BFDBFE; color: #1E40AF; }
+.ann-banner--warning { background: #FFFBEB; border-color: #FCD34D; color: #78350F; }
+.ann-banner--success { background: #ECFDF5; border-color: #A7F3D0; color: #065F46; }
+.ann-banner--alert   { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+
+.ann-body {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+}
+.ann-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  opacity: .85;
+}
+.ann-msg {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ann-cta {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: inherit;
+  cursor: pointer;
+  opacity: .8;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.ann-cta:hover { opacity: 1; }
+.ann-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  color: inherit;
+  opacity: .5;
+  transition: opacity .15s, background .15s;
+}
+.ann-dismiss:hover { opacity: 1; background: rgba(0,0,0,.08); }
+
+@media (max-width: 768px) {
+  .ann-msg { white-space: normal; }
+  .ann-banner { min-height: 52px; padding: 8px 14px; }
 }

@@ -551,6 +551,52 @@ let inboxFilter = 'all'; // 'all' | 'unread' | 'documents' | 'urgent'
 let inboxSelectedId = null;
 let notifPanelOpen = false;
 
+// ─── ANNOUNCEMENTS ────────────────────────────────────────
+// type: 'info' | 'warning' | 'success' | 'alert'
+// expires: ISO date string — banner auto-hides after this date
+const ANNOUNCEMENTS = [
+  {
+    id: 'mkt-good-friday-2026',
+    type: 'warning',
+    message: 'Markets are closed Friday, April 18 for Good Friday observance. Plan client orders accordingly.',
+    cta: null,
+    expires: '2026-04-19'
+  },
+  {
+    id: 'feature-inbox-v1',
+    type: 'info',
+    message: 'New: Client Inbox & Document Intake is now live — clients can send messages and upload documents directly.',
+    cta: { label: 'Open Inbox', route: 'inbox' },
+    expires: null
+  },
+  {
+    id: 'q1-reviews-due',
+    type: 'success',
+    message: 'Q1 portfolio review season is underway. 3 clients have not yet had their annual review.',
+    cta: { label: 'View Tasks', route: 'tasks' },
+    expires: '2026-05-01'
+  }
+];
+
+function getDismissedBanners() {
+  try { return JSON.parse(localStorage.getItem('gc_dismissed_banners') || '[]'); }
+  catch { return []; }
+}
+
+function dismissBanner(id) {
+  const list = getDismissedBanners();
+  if (!list.includes(id)) list.push(id);
+  localStorage.setItem('gc_dismissed_banners', JSON.stringify(list));
+}
+
+function getActiveBanner() {
+  const dismissed = getDismissedBanners();
+  return ANNOUNCEMENTS.find(a =>
+    !dismissed.includes(a.id) &&
+    (!a.expires || TODAY <= a.expires)
+  ) || null;
+}
+
 // ─── ROUTER ───────────────────────────────────────────────
 function parseRoute() {
   const hash = window.location.hash || '#/';
@@ -3850,6 +3896,32 @@ function renderOpsStaff(tasks) {
 // ─── MOBILE HELPERS ───────────────────────────────────────
 const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
 
+// ─── ANNOUNCEMENT BANNER ──────────────────────────────────
+function renderAnnouncementBanner() {
+  const a = getActiveBanner();
+  if (!a) return '';
+
+  const ICONS = {
+    info:    `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="7.5" r="6.5"/><line x1="7.5" y1="5" x2="7.5" y2="5.1"/><line x1="7.5" y1="7" x2="7.5" y2="11"/></svg>`,
+    warning: `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 1.5 13.5 13H1.5z"/><line x1="7.5" y1="6" x2="7.5" y2="9.5"/><line x1="7.5" y1="11.5" x2="7.5" y2="11.6"/></svg>`,
+    success: `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="6.5"/><polyline points="4.5,8 6.5,10 10.5,5.5"/></svg>`,
+    alert:   `<svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="7.5" cy="7.5" r="6.5"/><line x1="7.5" y1="4.5" x2="7.5" y2="8.5"/><line x1="7.5" y1="10.5" x2="7.5" y2="10.6"/></svg>`
+  };
+
+  const icon = ICONS[a.type] || ICONS.info;
+
+  return `<div class="ann-banner ann-banner--${a.type}" role="alert">
+    <div class="ann-body">
+      <span class="ann-icon">${icon}</span>
+      <span class="ann-msg">${a.message}</span>
+      ${a.cta ? `<button class="ann-cta" data-nav="${a.cta.route}">${a.cta.label} →</button>` : ''}
+    </div>
+    <button class="ann-dismiss" data-dismiss-banner="${a.id}" aria-label="Dismiss announcement">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="11" y2="11"/><line x1="11" y1="2" x2="2" y2="11"/></svg>
+    </button>
+  </div>`;
+}
+
 // ─── MAIN RENDER ──────────────────────────────────────────
 function renderApp() {
   const sidebar = renderSidebar();
@@ -3865,6 +3937,7 @@ function renderApp() {
   const main = (viewMap[state.view] || renderAdvisorView)();
 
   document.getElementById('app').innerHTML = `
+    ${renderAnnouncementBanner()}
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
     <div class="app-shell fade-in">
       ${sidebar}
@@ -3901,6 +3974,10 @@ function attachEventListeners() {
   const app = document.getElementById('app');
 
   app.addEventListener('click', e => {
+    // Announcement banner dismiss
+    const dismissBtn = e.target.closest('[data-dismiss-banner]');
+    if (dismissBtn) { dismissBanner(dismissBtn.getAttribute('data-dismiss-banner')); renderApp(); return; }
+
     // Top-level nav
     const navBtn = e.target.closest('[data-nav]');
     if (navBtn && !e.target.closest('[data-tab]')) { navigate(navBtn.getAttribute('data-nav') === 'advisor' ? '' : navBtn.getAttribute('data-nav')); return; }
