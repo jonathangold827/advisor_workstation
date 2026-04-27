@@ -96,10 +96,12 @@ export const clients = [
       { id: 'sr1', type: 'Tax Document', title: 'Q1 2026 K-1 Statements', status: 'open', priority: 'high', createdDate: daysAgo(26), dueDate: daysFromNow(19), notes: 'Client needs K-1s for KKR and Blackstone for tax filing. CPA deadline April 15.' },
       { id: 'sr2', type: 'Investment Change', title: 'Increase PE Allocation — $10M', status: 'in_progress', priority: 'medium', createdDate: daysAgo(7), dueDate: daysFromNow(35), notes: 'Evaluating Apollo Fund VIII and Carlyle Partners VII. Confirm capital call schedule.' }
     ],
-    wireInfo: {
-      accountName: 'Harrington Family Trust',
-      accountNum:  'GC-2015-001-HFT'
-    }
+    accounts: [
+      { name: 'Harrington Family Trust',         num: 'GC-2015-001-HFT', type: 'Revocable Trust'    },
+      { name: 'Harrington Taxable Account',       num: 'GC-2015-001-TAX', type: 'Taxable Brokerage'  },
+      { name: 'Harrington IRA — Robert',          num: 'GC-2015-001-IRA', type: 'Traditional IRA'    },
+      { name: 'Harrington Charitable Foundation', num: 'GC-2015-001-DAF', type: 'Donor Advised Fund'  }
+    ]
   },
 
   // ── 2. WHITFIELD ──────────────────────────────────────────
@@ -162,10 +164,11 @@ export const clients = [
       { id: 'sr2', type: 'Account Change', title: 'Account Re-registration to Surviving Spouse', status: 'awaiting_client', priority: 'high', createdDate: daysAgo(60), dueDate: daysFromNow(7), notes: 'Awaiting Margaret\'s signature on re-registration forms. Sent twice via DocuSign.' },
       { id: 'sr3', type: 'Document Request', title: 'Annual Tax Documents — 2025', status: 'open', priority: 'medium', createdDate: daysAgo(20), dueDate: daysFromNow(19), notes: 'Coordinate with CPA Patricia Moore on 1099s and K-1s.' }
     ],
-    wireInfo: {
-      accountName: 'Whitfield Revocable Trust',
-      accountNum:  'GC-2008-002-WRT'
-    }
+    accounts: [
+      { name: 'Whitfield Revocable Trust',        num: 'GC-2008-002-WRT', type: 'Revocable Trust'    },
+      { name: 'Whitfield IRA',                    num: 'GC-2008-002-IRA', type: 'Traditional IRA'    },
+      { name: 'Whitfield Taxable Account',         num: 'GC-2008-002-TAX', type: 'Taxable Brokerage'  }
+    ]
   },
 
   // ── 3. MORRISON ───────────────────────────────────────────
@@ -225,10 +228,11 @@ export const clients = [
     serviceRequests: [
       { id: 'sr1', type: 'Account Change', title: "Increase 529 Contribution — Connor", status: 'open', priority: 'medium', createdDate: daysAgo(10), dueDate: daysFromNow(30), notes: 'Max contribution for 2026 before Connor graduates. Confirm gift tax exclusion.' }
     ],
-    wireInfo: {
-      accountName: 'Morrison Joint Account',
-      accountNum:  'GC-2019-003-MJA'
-    }
+    accounts: [
+      { name: 'Morrison Joint Account',            num: 'GC-2019-003-JNT', type: 'Joint Brokerage'    },
+      { name: 'Morrison IRA — David',              num: 'GC-2019-003-IRA', type: 'Traditional IRA'    },
+      { name: 'Morrison Roth — Sarah',             num: 'GC-2019-003-RTH', type: 'Roth IRA'           }
+    ]
   },
 
   // ── 4. BANCROFT ───────────────────────────────────────────
@@ -291,10 +295,11 @@ export const clients = [
       { id: 'sr3', type: 'Investment Change', title: 'Consolidate Remaining Joint Accounts', status: 'in_progress', priority: 'medium', createdDate: daysAgo(40), dueDate: daysFromNow(21), notes: 'Transferring joint brokerage to individual account.' },
       { id: 'sr4', type: 'Estate Planning', title: 'Draft New Will & POA', status: 'open', priority: 'high', createdDate: daysAgo(30), dueDate: daysFromNow(30), notes: 'Existing will names William. Urgent to update.' }
     ],
-    wireInfo: {
-      accountName: 'Bancroft Individual Account',
-      accountNum:  'GC-2021-004-BIA'
-    }
+    accounts: [
+      { name: 'Bancroft Individual Account',       num: 'GC-2021-004-IND', type: 'Individual Brokerage'},
+      { name: 'Bancroft IRA',                      num: 'GC-2021-004-IRA', type: 'Traditional IRA'    },
+      { name: 'Bancroft Roth IRA',                 num: 'GC-2021-004-RTH', type: 'Roth IRA'           }
+    ]
   },
 
   // ── 5. AUGUSTINE ──────────────────────────────────────────
@@ -355,10 +360,12 @@ export const clients = [
     serviceRequests: [
       { id: 'sr1', type: 'Estate Planning', title: 'Add Grandchild to Family Trust', status: 'in_progress', priority: 'low', createdDate: daysAgo(20), dueDate: daysFromNow(45), notes: 'Add Henry Augustine (newborn) as trust beneficiary.' }
     ],
-    wireInfo: {
-      accountName: 'Augustine Family Trust III',
-      accountNum:  'GC-2012-005-AFT'
-    }
+    accounts: [
+      { name: 'Augustine Family Trust III',        num: 'GC-2012-005-AFT', type: 'Irrevocable Trust'  },
+      { name: 'Augustine IRA — Thomas',            num: 'GC-2012-005-IRA', type: 'Traditional IRA'    },
+      { name: 'Augustine Taxable Account',         num: 'GC-2012-005-TAX', type: 'Taxable Brokerage'  },
+      { name: 'Augustine Charitable Trust',        num: 'GC-2012-005-CRT', type: 'Charitable Rem. Trust'}
+    ]
   },
 
   // ── 6. PETROV ─────────────────────────────────────────────
@@ -418,10 +425,11 @@ export const clients = [
       { id: 'sr2', type: 'Document Request', title: '2025 Tax Documents', status: 'open', priority: 'medium', createdDate: daysAgo(25), dueDate: daysFromNow(19), notes: 'Annual tax package. Client unresponsive to requests.' },
       { id: 'sr3', type: 'Account Review', title: 'Annual Review — OVERDUE', status: 'open', priority: 'high', createdDate: daysAgo(30), dueDate: daysAgo(0), notes: 'Annual review has not been scheduled. Last proper review was March 2025.' }
     ],
-    wireInfo: {
-      accountName: 'Petrov Capital LLC',
-      accountNum:  'GC-2020-006-PCL'
-    }
+    accounts: [
+      { name: 'Petrov Capital LLC',                num: 'GC-2020-006-LLC', type: 'LLC Account'        },
+      { name: 'Petrov Individual Account',         num: 'GC-2020-006-IND', type: 'Individual Brokerage'},
+      { name: 'Petrov IRA',                        num: 'GC-2020-006-IRA', type: 'Traditional IRA'    }
+    ]
   },
 
   // ── 7. CHEN ───────────────────────────────────────────────
@@ -480,10 +488,11 @@ export const clients = [
     serviceRequests: [
       { id: 'sr1', type: 'Investment Change', title: 'RSU Vest Proceeds — Diversification Plan', status: 'in_progress', priority: 'high', createdDate: daysAgo(5), dueDate: daysFromNow(22), notes: 'Prepare allocation plan for $2.1M RSU proceeds. Reduce VRTX concentration to <40%. Present options by April 10.' }
     ],
-    wireInfo: {
-      accountName: 'Chen Investment Account',
-      accountNum:  'GC-2022-007-CIA'
-    }
+    accounts: [
+      { name: 'Chen Individual Account',           num: 'GC-2022-007-IND', type: 'Individual Brokerage'},
+      { name: 'Chen 401(k) Rollover IRA',          num: 'GC-2022-007-IRA', type: 'Rollover IRA'       },
+      { name: 'Chen Roth IRA',                     num: 'GC-2022-007-RTH', type: 'Roth IRA'           }
+    ]
   },
 
   // ── 8. SULLIVAN ───────────────────────────────────────────
@@ -542,10 +551,12 @@ export const clients = [
       { id: 'tp5', date: daysAgo(105), type: 'phone_call', title: 'RMD Planning Call', notes: 'Walked through 2026 RMD strategy. Reviewed charitable giving options with Scottsdale Food Bank QCD.', sentiment: 'positive' }
     ],
     serviceRequests: [],
-    wireInfo: {
-      accountName: 'Sullivan Retirement Trust',
-      accountNum:  'GC-2010-008-SRT'
-    }
+    accounts: [
+      { name: 'Sullivan Joint Account',            num: 'GC-2010-008-JNT', type: 'Joint Brokerage'    },
+      { name: 'Sullivan IRA — George',             num: 'GC-2010-008-IRA', type: 'Traditional IRA'    },
+      { name: 'Sullivan Roth — Patricia',          num: 'GC-2010-008-RTH', type: 'Roth IRA'           },
+      { name: 'Sullivan Retirement Trust',         num: 'GC-2010-008-TRT', type: 'Irrevocable Trust'  }
+    ]
   }
 
 ]; // end clients

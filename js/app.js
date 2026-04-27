@@ -3908,19 +3908,45 @@ function openWireModal(clientId) {
   const existing = document.getElementById('wire-modal-overlay');
   if (existing) existing.remove();
 
+  function ffcHtml(acct) {
+    if (!acct) return `
+      <div class="wire-ffc-empty">
+        <span>← Select an account above to populate wire instructions</span>
+      </div>`;
+    return `
+      <table class="wire-table wire-table--highlight">
+        <tr><td class="wire-field">Account Name</td><td class="wire-value">${acct.name}</td></tr>
+        <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${acct.num}</td></tr>
+        <tr><td class="wire-field">Account Type</td><td class="wire-value">${acct.type}</td></tr>
+        <tr><td class="wire-field">Reference / Memo</td><td class="wire-value">${client.lastName} · ${acct.num}</td></tr>
+      </table>`;
+  }
+
   const overlay = document.createElement('div');
   overlay.id = 'wire-modal-overlay';
   overlay.className = 'wire-overlay';
   overlay.innerHTML = `
     <div class="wire-modal" role="dialog" aria-modal="true" aria-label="Wire Instructions">
+
       <div class="wire-modal-header">
         <div>
           <div class="wire-modal-title">Wire Transfer Instructions</div>
-          <div class="wire-modal-sub">${client.displayName} · Generated ${today}</div>
+          <div class="wire-modal-sub">${client.displayName} · ${client.accounts.length} account${client.accounts.length !== 1 ? 's' : ''}</div>
         </div>
         <div class="wire-modal-actions">
-          <button class="wire-btn-print" id="wire-print-btn">Print / Save PDF</button>
+          <button class="wire-btn-print" id="wire-print-btn" disabled>Print / Save PDF</button>
           <button class="wire-btn-close" id="wire-close-btn" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <div class="wire-acct-picker" id="wire-acct-picker">
+        <div class="wire-acct-picker-label">Select account</div>
+        <div class="wire-acct-list">
+          ${client.accounts.map((a, i) => `
+            <button class="wire-acct-card" data-acct-idx="${i}">
+              <div class="wire-acct-name">${a.name}</div>
+              <div class="wire-acct-type">${a.type}</div>
+            </button>`).join('')}
         </div>
       </div>
 
@@ -3948,17 +3974,13 @@ function openWireModal(clientId) {
         </table>
 
         <div class="wire-section-label">For Further Credit (FFC) — Client Account</div>
-        <table class="wire-table wire-table--highlight">
-          <tr><td class="wire-field">Account Name</td><td class="wire-value">${client.wireInfo.accountName}</td></tr>
-          <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${client.wireInfo.accountNum}</td></tr>
-          <tr><td class="wire-field">Reference / Memo</td><td class="wire-value">${client.lastName} · ${client.wireInfo.accountNum}</td></tr>
-        </table>
+        <div id="wire-ffc">${ffcHtml(null)}</div>
 
-        <div class="wire-note">
+        <div class="wire-note" id="wire-note" style="display:none">
           <strong>Important:</strong> Always include the FFC account name and number in your wire instructions. Wires received without the FFC reference may be delayed. For questions contact ${advisor.name} at ${w.phone}.
         </div>
 
-        <div class="wire-footer">
+        <div class="wire-footer" id="wire-footer" style="display:none">
           ${advisor.firm} · ${w.address} · ${w.phone}<br>
           Document generated ${today} · For client use only — do not distribute
         </div>
@@ -3967,9 +3989,26 @@ function openWireModal(clientId) {
 
   document.body.appendChild(overlay);
 
+  // Account selection
+  let selectedIdx = null;
+  overlay.querySelectorAll('.wire-acct-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      overlay.querySelectorAll('.wire-acct-card').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedIdx = parseInt(btn.getAttribute('data-acct-idx'), 10);
+      const acct = client.accounts[selectedIdx];
+      document.getElementById('wire-ffc').innerHTML = ffcHtml(acct);
+      document.getElementById('wire-note').style.display = '';
+      document.getElementById('wire-footer').style.display = '';
+      document.getElementById('wire-print-btn').disabled = false;
+    });
+  });
+
   document.getElementById('wire-close-btn').addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  document.getElementById('wire-print-btn').addEventListener('click', () => window.print());
+  document.getElementById('wire-print-btn').addEventListener('click', () => {
+    if (selectedIdx !== null) window.print();
+  });
 }
 
 // ─── ANNOUNCEMENT BANNER ──────────────────────────────────

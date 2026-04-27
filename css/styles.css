@@ -3423,7 +3423,8 @@ a { text-decoration: none; color: inherit; }
   padding: 8px 16px; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: opacity .15s;
 }
-.wire-btn-print:hover { opacity: .88; }
+.wire-btn-print:hover:not(:disabled) { opacity: .88; }
+.wire-btn-print:disabled { opacity: .35; cursor: not-allowed; }
 .wire-btn-close {
   background: none; border: none;
   width: 32px; height: 32px; border-radius: 50%;
@@ -3489,6 +3490,56 @@ a { text-decoration: none; color: inherit; }
 .wire-table--highlight .wire-value { color: var(--primary); }
 .wire-table--highlight td { border-color: #BFDBFE; }
 
+/* Account picker */
+.wire-acct-picker {
+  padding: 14px 24px 0;
+  flex-shrink: 0;
+}
+.wire-acct-picker-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .8px;
+  color: var(--text-muted); margin-bottom: 10px;
+}
+.wire-acct-list {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+.wire-acct-card {
+  background: var(--bg-main);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--r);
+  padding: 9px 14px;
+  text-align: left; cursor: pointer;
+  transition: border-color .15s, background .15s, box-shadow .15s;
+  min-width: 160px;
+}
+.wire-acct-card:hover {
+  border-color: var(--primary);
+  background: var(--bg-card);
+}
+.wire-acct-card.selected {
+  border-color: var(--primary);
+  background: #EBF3FC;
+  box-shadow: 0 0 0 3px rgba(12,35,64,.08);
+}
+.wire-acct-name {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-main); line-height: 1.3;
+}
+.wire-acct-type {
+  font-size: 10px; color: var(--text-muted);
+  margin-top: 2px;
+}
+.wire-acct-card.selected .wire-acct-name { color: var(--primary); }
+
+/* FFC empty state */
+.wire-ffc-empty {
+  padding: 14px 0;
+  font-size: 13px; color: var(--text-muted);
+  font-style: italic;
+}
+
 .wire-note {
   margin-top: 20px; padding: 12px 16px;
   background: #FFFBEB; border-left: 3px solid var(--accent);
@@ -3514,6 +3565,7 @@ a { text-decoration: none; color: inherit; }
     border-radius: 0 !important; max-width: 100% !important;
   }
   .wire-modal-header { display: none !important; }
+  .wire-acct-picker  { display: none !important; }
   .wire-doc { overflow: visible !important; padding: 0 !important; }
   .wire-letterhead { border-bottom-color: #000 !important; }
 }
