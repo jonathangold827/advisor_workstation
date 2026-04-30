@@ -551,6 +551,105 @@ let inboxFilter = 'all'; // 'all' | 'unread' | 'documents' | 'urgent'
 let inboxSelectedId = null;
 let notifPanelOpen = false;
 
+// ─── REVIEW BOOKS ─────────────────────────────────────────
+function rbDate(n) {
+  const d = new Date(TODAY);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+const BOOK_SECTIONS = [
+  'Executive Summary', 'Portfolio Performance', 'Asset Allocation',
+  'Holdings Detail', 'Goals & Progress', 'Tax & Estate Planning', 'Action Items'
+];
+
+const BOOK_STATUS_META = {
+  draft:     { label: 'Draft',     cls: 'rbs-draft'     },
+  ready:     { label: 'Ready',     cls: 'rbs-ready'     },
+  delivered: { label: 'Delivered', cls: 'rbs-delivered' },
+  archived:  { label: 'Archived',  cls: 'rbs-archived'  }
+};
+
+const BOOK_TYPE_LABEL = { quarterly: 'Quarterly', annual: 'Annual', ad_hoc: 'Ad Hoc' };
+
+let reviewBooks = [
+  // ── DRAFT ──────────────────────────────────────────────────────────────
+  { id:'rb001', clientId:1, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(4), status:'draft',
+    createdDate: rbDate(-14),
+    completedSections: ['Executive Summary','Portfolio Performance','Asset Allocation','Holdings Detail','Goals & Progress'],
+    notes:'Pending PE allocation update from ops.', sourceId:null },
+
+  { id:'rb002', clientId:4, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(9), status:'draft',
+    createdDate: rbDate(-8),
+    completedSections: ['Executive Summary','Portfolio Performance'],
+    notes:'Include divorce restructure context in summary.', sourceId:null },
+
+  { id:'rb003', clientId:3, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(-2), status:'draft',
+    createdDate: rbDate(-18),
+    completedSections: ['Executive Summary','Portfolio Performance','Asset Allocation'],
+    notes:'', sourceId:null },
+
+  { id:'rb004', clientId:7, title:'2026 Annual Review', type:'annual',
+    asOfDate:'2026-03-31', meetingDate: rbDate(18), status:'draft',
+    createdDate: rbDate(-5),
+    completedSections: ['Executive Summary'],
+    notes:'', sourceId:null },
+
+  { id:'rb005', clientId:5, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(22), status:'draft',
+    createdDate: rbDate(-3),
+    completedSections: [],
+    notes:'', sourceId:null },
+
+  // ── READY ───────────────────────────────────────────────────────────────
+  { id:'rb006', clientId:2, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(6), status:'ready',
+    createdDate: rbDate(-20),
+    completedSections: [...BOOK_SECTIONS],
+    notes:'All sections reviewed. Ready to send to client.', sourceId:null },
+
+  // ── DELIVERED ───────────────────────────────────────────────────────────
+  { id:'rb007', clientId:8, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(-5), status:'delivered',
+    createdDate: rbDate(-25), completedSections: [...BOOK_SECTIONS],
+    notes:'', sourceId:null },
+
+  { id:'rb008', clientId:6, title:'Q1 2026 Portfolio Review', type:'quarterly',
+    asOfDate:'2026-03-31', meetingDate: rbDate(-10), status:'delivered',
+    createdDate: rbDate(-28), completedSections: [...BOOK_SECTIONS],
+    notes:'', sourceId:null },
+
+  // ── ARCHIVE ─────────────────────────────────────────────────────────────
+  { id:'rb009', clientId:1, title:'Q4 2025 Portfolio Review', type:'quarterly',
+    asOfDate:'2025-12-31', meetingDate:'2026-01-14', status:'archived',
+    createdDate:'2026-01-02', completedSections:[...BOOK_SECTIONS], notes:'', sourceId:null },
+
+  { id:'rb010', clientId:2, title:'Q4 2025 Portfolio Review', type:'quarterly',
+    asOfDate:'2025-12-31', meetingDate:'2026-01-09', status:'archived',
+    createdDate:'2025-12-30', completedSections:[...BOOK_SECTIONS], notes:'', sourceId:null },
+
+  { id:'rb011', clientId:3, title:'2025 Annual Review', type:'annual',
+    asOfDate:'2025-12-31', meetingDate:'2026-01-21', status:'archived',
+    createdDate:'2025-12-15', completedSections:[...BOOK_SECTIONS], notes:'', sourceId:null },
+
+  { id:'rb012', clientId:5, title:'Q4 2025 Portfolio Review', type:'quarterly',
+    asOfDate:'2025-12-31', meetingDate:'2026-01-16', status:'archived',
+    createdDate:'2025-12-28', completedSections:[...BOOK_SECTIONS], notes:'', sourceId:null },
+
+  { id:'rb013', clientId:8, title:'Q4 2025 Portfolio Review', type:'quarterly',
+    asOfDate:'2025-12-31', meetingDate:'2026-01-10', status:'archived',
+    createdDate:'2025-12-29', completedSections:[...BOOK_SECTIONS], notes:'', sourceId:null },
+
+  { id:'rb014', clientId:6, title:'2025 Annual Review', type:'annual',
+    asOfDate:'2025-12-31', meetingDate:'2026-01-23', status:'archived',
+    createdDate:'2025-12-20', completedSections:[...BOOK_SECTIONS], notes:'', sourceId:null },
+];
+
+let rbNextId = 15;
+
 // ─── ANNOUNCEMENTS ────────────────────────────────────────
 // type: 'info' | 'warning' | 'success' | 'alert'
 // expires: ISO date string — banner auto-hides after this date
@@ -605,7 +704,7 @@ function parseRoute() {
     state.view = 'client';
     state.clientId = parseInt(parts[1]);
     state.activeTab = 'overview';
-  } else if (['calendar', 'tasks', 'reports', 'operations', 'inbox'].includes(parts[0])) {
+  } else if (['calendar', 'tasks', 'reports', 'operations', 'inbox', 'reviews'].includes(parts[0])) {
     state.view = parts[0];
     state.clientId = null;
   } else {
@@ -697,6 +796,10 @@ function renderSidebar() {
         </button>
         <button class="nav-item ${state.view==='reports'?'active':''}" data-nav="reports">
           <span class="nav-icon">${NAV_ICONS.reports}</span>Reports
+        </button>
+        <button class="nav-item ${state.view==='reviews'?'active':''}" data-nav="reviews">
+          <span class="nav-icon">${NAV_ICONS.reviews}</span>Review Books
+          ${reviewBooks.filter(b=>b.status==='draft'||b.status==='ready').length > 0 ? `<span class="nav-badge">${reviewBooks.filter(b=>b.status==='draft'||b.status==='ready').length}</span>` : ''}
         </button>
         <div class="nav-label" style="margin-top:12px">Operations</div>
         <button class="nav-item ${state.view==='operations'?'active':''}" data-nav="operations">
@@ -1064,6 +1167,12 @@ const NAV_ICONS = {
     <line x1="1.5" y1="7" x2="3.3" y2="7"/><line x1="10.7" y1="7" x2="12.5" y2="7"/>
     <line x1="3" y1="3" x2="4.3" y2="4.3"/><line x1="9.7" y1="9.7" x2="11" y2="11"/>
     <line x1="11" y1="3" x2="9.7" y2="4.3"/><line x1="4.3" y1="9.7" x2="3" y2="11"/>
+  </svg>`,
+  reviews: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="1" width="10" height="12" rx="1.2"/>
+    <line x1="4.5" y1="4.5" x2="9.5" y2="4.5"/>
+    <line x1="4.5" y1="7" x2="9.5" y2="7"/>
+    <line x1="4.5" y1="9.5" x2="7.5" y2="9.5"/>
   </svg>`,
   inbox: `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
     <rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/>
@@ -2025,7 +2134,8 @@ function renderClientView() {
         { id: 'service',       label: 'Service',       badge: client.serviceRequests.filter(r=>r.status!=='completed').length || null },
         { id: 'holdings',      label: 'Holdings',      badge: null },
         { id: 'transactions',  label: 'Transactions',  badge: null },
-        { id: 'inbox',         label: 'Inbox',         badge: clientMessages.filter(m=>m.clientId===client.id&&!m.read).length || null }
+        { id: 'inbox',         label: 'Inbox',         badge: clientMessages.filter(m=>m.clientId===client.id&&!m.read).length || null },
+        { id: 'reviews',       label: 'Review Books',  badge: reviewBooks.filter(b=>b.clientId===client.id&&(b.status==='draft'||b.status==='ready')).length || null }
       ].map(t => `
         <button class="tab-btn ${state.activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
           ${t.label}
@@ -2047,6 +2157,7 @@ function renderTabContent(client) {
     case 'holdings':      return renderHoldingsTab(client);
     case 'transactions':  return renderTransactionsTab(client);
     case 'inbox':         return renderClientInboxTab(client);
+    case 'reviews':       return renderClientReviewsTab(client);
     default:              return renderOverviewTab(client);
   }
 }
@@ -3898,6 +4009,370 @@ function renderOpsStaff(tasks) {
 // ─── MOBILE HELPERS ───────────────────────────────────────
 const menuBtn = `<button class="mobile-menu-btn" data-sidebar-toggle aria-label="Menu"><span></span></button>`;
 
+// ─── REVIEW BOOKS VIEW ────────────────────────────────────
+function rbUrgency(book) {
+  const days = daysUntil(book.meetingDate);
+  if (book.status === 'draft' && days < 0)  return 'overdue';
+  if (book.status === 'ready'  && days < 0)  return 'overdue';
+  if (days >= 0 && days <= 4)               return 'urgent';
+  if (days >= 0 && days <= 9)               return 'soon';
+  return 'ok';
+}
+
+function rbMeetingLabel(book) {
+  const days = daysUntil(book.meetingDate);
+  if (days < 0) return `<span class="rb-days rb-days--overdue">${Math.abs(days)}d overdue</span>`;
+  if (days === 0) return `<span class="rb-days rb-days--urgent">Today</span>`;
+  if (days <= 4)  return `<span class="rb-days rb-days--urgent">${days}d</span>`;
+  if (days <= 9)  return `<span class="rb-days rb-days--soon">${days}d</span>`;
+  return `<span class="rb-days rb-days--ok">${days}d</span>`;
+}
+
+function rbProgressBar(book) {
+  const done = book.completedSections.length;
+  const total = BOOK_SECTIONS.length;
+  const pct = total === 0 ? 0 : Math.round(done / total * 100);
+  const color = pct === 100 ? 'var(--green)' : pct >= 60 ? 'var(--accent)' : 'var(--primary)';
+  return `<div class="rb-prog">
+    <div class="rb-prog-bar" style="width:${pct}%;background:${color}"></div>
+    <span class="rb-prog-label">${done}/${total}</span>
+  </div>`;
+}
+
+function rbActionBtn(book) {
+  if (book.status === 'draft')
+    return `<button class="rb-act-btn rb-act--primary" data-rb-action="ready:${book.id}">Mark Ready</button>`;
+  if (book.status === 'ready')
+    return `<button class="rb-act-btn rb-act--deliver" data-rb-action="deliver:${book.id}">Deliver</button>`;
+  if (book.status === 'delivered')
+    return `<button class="rb-act-btn rb-act--ghost" data-rb-action="archive:${book.id}">Archive</button>`;
+  return '';
+}
+
+function renderReviewBooksView() {
+  const inflight  = reviewBooks.filter(b => b.status === 'draft' || b.status === 'ready');
+  const delivered = reviewBooks.filter(b => b.status === 'delivered');
+  const archived  = reviewBooks.filter(b => b.status === 'archived');
+
+  // Sort in-flight: overdue first, then by meeting date asc
+  const sorted = [...inflight, ...delivered].sort((a, b) => {
+    const ua = rbUrgency(a), ub = rbUrgency(b);
+    const rank = { overdue: 0, urgent: 1, soon: 2, ok: 3 };
+    if (rank[ua] !== rank[ub]) return rank[ua] - rank[ub];
+    return new Date(a.meetingDate) - new Date(b.meetingDate);
+  });
+
+  const inFlightRows = sorted.map(book => {
+    const c = clients.find(cl => cl.id === book.clientId);
+    const urg = rbUrgency(book);
+    return `<tr class="rb-row rb-row--${urg}" data-rb-id="${book.id}">
+      <td class="rb-td-client">
+        <span class="rb-avatar" style="background:${book.status==='ready'?'#1E7A52':urg==='overdue'?'#A83228':urg==='urgent'?'#A87020':'#6B8FAF'}">${c?.initials||'??'}</span>
+        <span class="rb-client-name">${c?.displayName||'Unknown'}</span>
+      </td>
+      <td class="rb-td-title">
+        <span class="rb-title">${book.title}</span>
+        <span class="rb-type-chip">${BOOK_TYPE_LABEL[book.type]}</span>
+      </td>
+      <td class="rb-td-asof">${book.asOfDate}</td>
+      <td class="rb-td-meeting">${rbMeetingLabel(book)}<div class="rb-meeting-date">${book.meetingDate}</div></td>
+      <td class="rb-td-prog">${rbProgressBar(book)}</td>
+      <td class="rb-td-status"><span class="rb-status-badge ${BOOK_STATUS_META[book.status].cls}">${BOOK_STATUS_META[book.status].label}</span></td>
+      <td class="rb-td-action">${rbActionBtn(book)}</td>
+    </tr>`;
+  }).join('');
+
+  const archiveRows = archived.sort((a, b) => new Date(b.meetingDate) - new Date(a.meetingDate)).map(book => {
+    const c = clients.find(cl => cl.id === book.clientId);
+    return `<tr class="rb-row rb-row--archived">
+      <td class="rb-td-client">
+        <span class="rb-avatar rb-avatar--muted">${c?.initials||'??'}</span>
+        <span class="rb-client-name">${c?.displayName||'Unknown'}</span>
+      </td>
+      <td class="rb-td-title">
+        <span class="rb-title">${book.title}</span>
+        <span class="rb-type-chip">${BOOK_TYPE_LABEL[book.type]}</span>
+      </td>
+      <td class="rb-td-asof">${book.asOfDate}</td>
+      <td class="rb-td-meeting"><span class="rb-meeting-date">${book.meetingDate}</span></td>
+      <td class="rb-td-action" colspan="3">
+        <button class="rb-act-btn rb-act--repurpose" data-rb-repurpose="${book.id}">↺ Repurpose</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="main-header">
+    ${menuBtn}
+    <div class="header-title">Review Books</div>
+    <div class="header-spacer"></div>
+    <div class="header-actions">
+      <button class="header-btn primary" data-rb-new>+ New Book</button>
+    </div>
+    ${headerEnd()}
+  </div>
+
+  <div class="main-content">
+    <div class="rb-pipeline-strip">
+      <div class="rb-pipe-step rb-pipe--draft">
+        <span class="rb-pipe-num">${reviewBooks.filter(b=>b.status==='draft').length}</span>
+        <span class="rb-pipe-label">Draft</span>
+      </div>
+      <div class="rb-pipe-arrow">→</div>
+      <div class="rb-pipe-step rb-pipe--ready">
+        <span class="rb-pipe-num">${reviewBooks.filter(b=>b.status==='ready').length}</span>
+        <span class="rb-pipe-label">Ready</span>
+      </div>
+      <div class="rb-pipe-arrow">→</div>
+      <div class="rb-pipe-step rb-pipe--delivered">
+        <span class="rb-pipe-num">${reviewBooks.filter(b=>b.status==='delivered').length}</span>
+        <span class="rb-pipe-label">Delivered</span>
+      </div>
+      <div class="rb-pipe-arrow">→</div>
+      <div class="rb-pipe-step rb-pipe--archived">
+        <span class="rb-pipe-num">${reviewBooks.filter(b=>b.status==='archived').length}</span>
+        <span class="rb-pipe-label">Archived</span>
+      </div>
+    </div>
+
+    <div class="rb-section">
+      <div class="rb-section-hd">
+        <span class="rb-section-title">In Flight</span>
+        <span class="rb-count">${sorted.length}</span>
+        ${sorted.filter(b => rbUrgency(b) === 'overdue').length > 0
+          ? `<span class="rb-overdue-flag">${sorted.filter(b=>rbUrgency(b)==='overdue').length} overdue</span>` : ''}
+      </div>
+      ${sorted.length === 0
+        ? `<div class="rb-empty">No books in flight — all delivered! <button class="rb-act-btn rb-act--primary" data-rb-new>+ New Book</button></div>`
+        : `<div class="rb-table-wrap">
+        <table class="rb-table">
+          <thead><tr>
+            <th>Client</th><th>Book</th><th>As Of</th><th>Meeting</th><th>Progress</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody>${inFlightRows}</tbody>
+        </table></div>`}
+    </div>
+
+    <div class="rb-section rb-section--archive">
+      <div class="rb-section-hd">
+        <span class="rb-section-title">Archive</span>
+        <span class="rb-count">${archived.length}</span>
+        <span class="rb-section-hint">Repurpose any previous book to create a new draft — just update the as-of date</span>
+      </div>
+      <div class="rb-table-wrap">
+        <table class="rb-table rb-table--archive">
+          <thead><tr>
+            <th>Client</th><th>Book</th><th>As Of</th><th>Meeting Date</th><th colspan="3"></th>
+          </tr></thead>
+          <tbody>${archiveRows}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderClientReviewsTab(client) {
+  const books = reviewBooks.filter(b => b.clientId === client.id);
+  const inflight = books.filter(b => b.status === 'draft' || b.status === 'ready');
+  const past     = books.filter(b => b.status === 'delivered' || b.status === 'archived');
+
+  function bookCard(book) {
+    const urg = rbUrgency(book);
+    const isPast = book.status === 'delivered' || book.status === 'archived';
+    return `<div class="rb-client-card rb-client-card--${urg}${isPast?' rb-client-card--past':''}">
+      <div class="rb-cc-top">
+        <span class="rb-status-badge ${BOOK_STATUS_META[book.status].cls}">${BOOK_STATUS_META[book.status].label}</span>
+        <span class="rb-type-chip">${BOOK_TYPE_LABEL[book.type]}</span>
+      </div>
+      <div class="rb-cc-title">${book.title}</div>
+      <div class="rb-cc-meta">As of ${book.asOfDate} · Meeting ${book.meetingDate}</div>
+      ${!isPast ? rbProgressBar(book) : ''}
+      <div class="rb-cc-actions">
+        ${rbActionBtn(book)}
+        ${book.status === 'archived' ? `<button class="rb-act-btn rb-act--repurpose" data-rb-repurpose="${book.id}">↺ Repurpose</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  return `<div class="rb-client-tab">
+    ${inflight.length > 0 ? `
+      <div class="rb-client-section-label">In Flight</div>
+      <div class="rb-client-cards">${inflight.map(bookCard).join('')}</div>` : ''}
+    ${inflight.length === 0 ? `
+      <div class="rb-empty" style="margin-bottom:24px">No active books for this client.
+        <button class="rb-act-btn rb-act--primary" data-rb-new data-rb-prefill="${client.id}" style="margin-left:10px">+ New Book</button>
+      </div>` : ''}
+    ${past.length > 0 ? `
+      <div class="rb-client-section-label" style="margin-top:${inflight.length?'20px':'0'}">Previous Books</div>
+      <div class="rb-client-cards">${past.map(bookCard).join('')}</div>` : ''}
+  </div>`;
+}
+
+// ─── REPURPOSE MODAL ──────────────────────────────────────
+function openRepurposeModal(bookId) {
+  const source = reviewBooks.find(b => b.id === bookId);
+  if (!source) return;
+  const client = clients.find(c => c.id === source.clientId);
+
+  // Suggest next period's as-of date
+  const prevAsOf = new Date(source.asOfDate);
+  const nextAsOf = new Date(prevAsOf);
+  nextAsOf.setFullYear(nextAsOf.getFullYear() + (source.type === 'annual' ? 1 : 0));
+  if (source.type === 'quarterly') nextAsOf.setMonth(nextAsOf.getMonth() + 3);
+  const suggestedAsOf = nextAsOf.toISOString().split('T')[0];
+
+  const suggestedMeeting = new Date(suggestedAsOf);
+  suggestedMeeting.setDate(suggestedMeeting.getDate() + 14);
+  const suggestedMeetingStr = suggestedMeeting.toISOString().split('T')[0];
+
+  const existing = document.getElementById('rb-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rb-modal-overlay';
+  overlay.className = 'rb-modal-overlay';
+  overlay.innerHTML = `
+    <div class="rb-modal" role="dialog">
+      <div class="rb-modal-hd">
+        <div class="rb-modal-title">Repurpose Review Book</div>
+        <button class="wire-btn-close" id="rb-modal-close">✕</button>
+      </div>
+      <div class="rb-modal-body">
+        <div class="rb-modal-source">
+          <div class="rb-ms-label">Source book</div>
+          <div class="rb-ms-name">${source.title}</div>
+          <div class="rb-ms-meta">${client?.displayName} · As of ${source.asOfDate}</div>
+        </div>
+        <div class="rb-modal-fields">
+          <div class="rb-field-group">
+            <label class="rb-field-label">New title</label>
+            <input class="rb-field-input" id="rb-new-title" value="${source.title.replace(/Q[1-4] \d{4}|Annual \d{4}/,
+              source.type==='annual' ? 'Annual '+suggestedAsOf.slice(0,4) :
+              'Q'+(Math.floor(nextAsOf.getMonth()/3)+1)+' '+suggestedAsOf.slice(0,4))}">
+          </div>
+          <div class="rb-field-row">
+            <div class="rb-field-group">
+              <label class="rb-field-label">New as-of date</label>
+              <input type="date" class="rb-field-input" id="rb-new-asof" value="${suggestedAsOf}">
+            </div>
+            <div class="rb-field-group">
+              <label class="rb-field-label">Meeting date</label>
+              <input type="date" class="rb-field-input" id="rb-new-meeting" value="${suggestedMeetingStr}">
+            </div>
+          </div>
+        </div>
+        <div class="rb-modal-note">All sections will reset to incomplete — content structure is carried over.</div>
+      </div>
+      <div class="rb-modal-ft">
+        <button class="rb-act-btn rb-act--ghost" id="rb-cancel-btn">Cancel</button>
+        <button class="rb-act-btn rb-act--primary" id="rb-create-btn">Create Draft</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  document.getElementById('rb-modal-close').addEventListener('click', close);
+  document.getElementById('rb-cancel-btn').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  document.getElementById('rb-create-btn').addEventListener('click', () => {
+    const title   = document.getElementById('rb-new-title').value.trim() || source.title;
+    const asOf    = document.getElementById('rb-new-asof').value || suggestedAsOf;
+    const meeting = document.getElementById('rb-new-meeting').value || suggestedMeetingStr;
+    reviewBooks.push({
+      id: `rb${String(rbNextId++).padStart(3,'0')}`,
+      clientId: source.clientId,
+      title, type: source.type,
+      asOfDate: asOf, meetingDate: meeting,
+      status: 'draft', createdDate: TODAY,
+      completedSections: [], notes: '',
+      sourceId: source.id
+    });
+    close();
+    renderApp();
+  });
+}
+
+// ─── NEW BOOK MODAL ────────────────────────────────────────
+function openNewBookModal(prefillClientId) {
+  const existing = document.getElementById('rb-modal-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rb-modal-overlay';
+  overlay.className = 'rb-modal-overlay';
+  overlay.innerHTML = `
+    <div class="rb-modal" role="dialog">
+      <div class="rb-modal-hd">
+        <div class="rb-modal-title">New Review Book</div>
+        <button class="wire-btn-close" id="rb-modal-close">✕</button>
+      </div>
+      <div class="rb-modal-body">
+        <div class="rb-modal-fields">
+          <div class="rb-field-group">
+            <label class="rb-field-label">Client</label>
+            <select class="rb-field-input" id="rb-nb-client">
+              ${clients.map(c => `<option value="${c.id}"${c.id===prefillClientId?' selected':''}>${c.displayName}</option>`).join('')}
+            </select>
+          </div>
+          <div class="rb-field-row">
+            <div class="rb-field-group">
+              <label class="rb-field-label">Type</label>
+              <select class="rb-field-input" id="rb-nb-type">
+                <option value="quarterly">Quarterly</option>
+                <option value="annual">Annual</option>
+                <option value="ad_hoc">Ad Hoc</option>
+              </select>
+            </div>
+            <div class="rb-field-group">
+              <label class="rb-field-label">As-of date</label>
+              <input type="date" class="rb-field-input" id="rb-nb-asof" value="${TODAY}">
+            </div>
+          </div>
+          <div class="rb-field-group">
+            <label class="rb-field-label">Meeting date</label>
+            <input type="date" class="rb-field-input" id="rb-nb-meeting" value="${rbDate(14)}">
+          </div>
+          <div class="rb-field-group">
+            <label class="rb-field-label">Title</label>
+            <input class="rb-field-input" id="rb-nb-title" placeholder="e.g. Q2 2026 Portfolio Review">
+          </div>
+        </div>
+      </div>
+      <div class="rb-modal-ft">
+        <button class="rb-act-btn rb-act--ghost" id="rb-cancel-btn">Cancel</button>
+        <button class="rb-act-btn rb-act--primary" id="rb-create-btn">Create Draft</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  document.getElementById('rb-modal-close').addEventListener('click', close);
+  document.getElementById('rb-cancel-btn').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  document.getElementById('rb-create-btn').addEventListener('click', () => {
+    const clientId = parseInt(document.getElementById('rb-nb-client').value, 10);
+    const type     = document.getElementById('rb-nb-type').value;
+    const asOf     = document.getElementById('rb-nb-asof').value;
+    const meeting  = document.getElementById('rb-nb-meeting').value;
+    const title    = document.getElementById('rb-nb-title').value.trim() ||
+      `${BOOK_TYPE_LABEL[type]} Review`;
+    reviewBooks.push({
+      id: `rb${String(rbNextId++).padStart(3,'0')}`,
+      clientId, title, type,
+      asOfDate: asOf, meetingDate: meeting,
+      status: 'draft', createdDate: TODAY,
+      completedSections: [], notes: '',
+      sourceId: null
+    });
+    close();
+    renderApp();
+  });
+}
+
 // ─── WIRE INSTRUCTIONS MODAL ──────────────────────────────
 function openWireModal(clientId) {
   const client = clients.find(c => c.id === clientId);
@@ -4046,6 +4521,7 @@ function renderApp() {
     calendar:   renderCalendarView,
     tasks:      renderTasksView,
     inbox:      renderInboxView,
+    reviews:    renderReviewBooksView,
     reports:    renderReportsView,
     operations: renderOperationsView
   };
@@ -4089,6 +4565,29 @@ function attachEventListeners() {
   const app = document.getElementById('app');
 
   app.addEventListener('click', e => {
+    // Review book status actions
+    const rbAction = e.target.closest('[data-rb-action]');
+    if (rbAction) {
+      const [action, id] = rbAction.getAttribute('data-rb-action').split(':');
+      const book = reviewBooks.find(b => b.id === id);
+      if (book) {
+        if (action === 'ready')   book.status = 'ready';
+        if (action === 'deliver') book.status = 'delivered';
+        if (action === 'archive') book.status = 'archived';
+      }
+      renderApp(); return;
+    }
+
+    // Review book repurpose
+    const rpBtn = e.target.closest('[data-rb-repurpose]');
+    if (rpBtn) { openRepurposeModal(rpBtn.getAttribute('data-rb-repurpose')); return; }
+
+    // New review book
+    if (e.target.closest('[data-rb-new]')) {
+      const prefill = e.target.closest('[data-rb-prefill]')?.getAttribute('data-rb-prefill');
+      openNewBookModal(prefill ? parseInt(prefill, 10) : null); return;
+    }
+
     // Wire instructions modal
     const wireBtn = e.target.closest('[data-wire-instructions]');
     if (wireBtn) { openWireModal(parseInt(wireBtn.getAttribute('data-wire-instructions'), 10)); return; }
