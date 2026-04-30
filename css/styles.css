@@ -3593,6 +3593,24 @@ a { text-decoration: none; color: inherit; }
 .rb-pipe--delivered .rb-pipe-num { color: var(--green); }
 .rb-pipe--archived .rb-pipe-num { color: var(--text-muted); }
 
+.rb-pipe--needs-action { position: relative; }
+.rb-pipe--needs-action .rb-pipe-num  { color: #B8923C; }
+.rb-pipe--needs-action .rb-pipe-label { color: #B8923C; }
+.rb-pipe-hint {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .5px; color: #B8923C; margin-top: 1px;
+}
+.rb-pipe-pulse {
+  position: absolute; top: 8px; right: 16px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #B8923C;
+  animation: rbPulse 1.8s ease-in-out infinite;
+}
+@keyframes rbPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(184,146,60,.5); }
+  50%     { box-shadow: 0 0 0 7px rgba(184,146,60,0); }
+}
+
 /* Sections */
 .rb-section { margin-bottom: 28px; }
 .rb-section-hd {
@@ -3695,6 +3713,42 @@ a { text-decoration: none; color: inherit; }
 .rb-act--ghost:hover { border-color: var(--primary); color: var(--primary); }
 .rb-act--repurpose { background: none; color: var(--primary); border-color: var(--primary); }
 .rb-act--repurpose:hover { background: #EBF3FC; }
+.rb-act--archive-now {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  font-weight: 700; letter-spacing: .2px;
+}
+.rb-act--archive-now:hover { opacity: .85; }
+.rb-act--archive-all {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  font-weight: 700; margin-left: auto;
+}
+.rb-act--archive-all:hover { opacity: .85; }
+
+/* Needs-archiving section */
+.rb-section--needs-archive {
+  background: #FFFBEB;
+  border: 1.5px solid #FCD34D;
+  border-radius: var(--r-xl);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.rb-section--needs-archive .rb-section-hd { margin-bottom: 14px; }
+.rb-needs-archive-icon { font-size: 14px; color: #B8923C; }
+.rb-count--amber {
+  background: #FEF3C7; color: #78350F;
+  border-color: #FCD34D;
+}
+.rb-table-wrap--amber { border-color: #FCD34D; }
+.rb-row--needs-archive td { background: #FFFBEB; }
+.rb-row--needs-archive:hover td { background: #FEF3C7; }
+
+/* Auto-archive progress */
+.rb-td-autoarchive { vertical-align: middle; }
+.rb-auto-label { font-size: 11px; color: #78350F; font-weight: 600; display: block; margin-bottom: 4px; }
+.rb-auto-track {
+  height: 4px; background: #FDE68A; border-radius: 2px; overflow: hidden; width: 100px;
+}
+.rb-auto-bar { height: 100%; background: #B8923C; border-radius: 2px; transition: width .3s; }
 
 /* Empty state */
 .rb-empty { padding: 20px; font-size: 13px; color: var(--text-muted); }

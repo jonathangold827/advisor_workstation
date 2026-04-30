@@ -4045,17 +4045,25 @@ function rbActionBtn(book) {
   if (book.status === 'ready')
     return `<button class="rb-act-btn rb-act--deliver" data-rb-action="deliver:${book.id}">Deliver</button>`;
   if (book.status === 'delivered')
-    return `<button class="rb-act-btn rb-act--ghost" data-rb-action="archive:${book.id}">Archive</button>`;
+    return `<button class="rb-act-btn rb-act--archive-now" data-rb-action="archive:${book.id}">Archive Now →</button>`;
   return '';
+}
+
+function rbAutoArchiveDays(book) {
+  // Mock: delivered books auto-archive 7 days after meeting date
+  const d = new Date(book.meetingDate);
+  d.setDate(d.getDate() + 7);
+  return Math.max(0, daysUntil(d.toISOString().split('T')[0]));
 }
 
 function renderReviewBooksView() {
   const inflight  = reviewBooks.filter(b => b.status === 'draft' || b.status === 'ready');
   const delivered = reviewBooks.filter(b => b.status === 'delivered');
   const archived  = reviewBooks.filter(b => b.status === 'archived');
+  const nDel = delivered.length;
 
-  // Sort in-flight: overdue first, then by meeting date asc
-  const sorted = [...inflight, ...delivered].sort((a, b) => {
+  // Sort in-flight only: overdue first, then by meeting date asc
+  const sorted = [...inflight].sort((a, b) => {
     const ua = rbUrgency(a), ub = rbUrgency(b);
     const rank = { overdue: 0, urgent: 1, soon: 2, ok: 3 };
     if (rank[ua] !== rank[ub]) return rank[ua] - rank[ub];
@@ -4078,6 +4086,28 @@ function renderReviewBooksView() {
       <td class="rb-td-meeting">${rbMeetingLabel(book)}<div class="rb-meeting-date">${book.meetingDate}</div></td>
       <td class="rb-td-prog">${rbProgressBar(book)}</td>
       <td class="rb-td-status"><span class="rb-status-badge ${BOOK_STATUS_META[book.status].cls}">${BOOK_STATUS_META[book.status].label}</span></td>
+      <td class="rb-td-action">${rbActionBtn(book)}</td>
+    </tr>`;
+  }).join('');
+
+  const deliveredRows = delivered.map(book => {
+    const c = clients.find(cl => cl.id === book.clientId);
+    const autoIn = rbAutoArchiveDays(book);
+    return `<tr class="rb-row rb-row--needs-archive" data-rb-id="${book.id}">
+      <td class="rb-td-client">
+        <span class="rb-avatar" style="background:#B8923C">${c?.initials||'??'}</span>
+        <span class="rb-client-name">${c?.displayName||'Unknown'}</span>
+      </td>
+      <td class="rb-td-title">
+        <span class="rb-title">${book.title}</span>
+        <span class="rb-type-chip">${BOOK_TYPE_LABEL[book.type]}</span>
+      </td>
+      <td class="rb-td-asof">${book.asOfDate}</td>
+      <td class="rb-td-meeting"><span class="rb-meeting-date">${book.meetingDate}</span></td>
+      <td colspan="2" class="rb-td-autoarchive">
+        <span class="rb-auto-label">Auto-archives in ${autoIn}d</span>
+        <div class="rb-auto-track"><div class="rb-auto-bar" style="width:${Math.max(4, 100 - autoIn / 7 * 100).toFixed(0)}%"></div></div>
+      </td>
       <td class="rb-td-action">${rbActionBtn(book)}</td>
     </tr>`;
   }).join('');
@@ -4124,9 +4154,11 @@ function renderReviewBooksView() {
         <span class="rb-pipe-label">Ready</span>
       </div>
       <div class="rb-pipe-arrow">→</div>
-      <div class="rb-pipe-step rb-pipe--delivered">
-        <span class="rb-pipe-num">${reviewBooks.filter(b=>b.status==='delivered').length}</span>
+      <div class="rb-pipe-step rb-pipe--delivered${nDel > 0 ? ' rb-pipe--needs-action' : ''}">
+        ${nDel > 0 ? `<span class="rb-pipe-pulse"></span>` : ''}
+        <span class="rb-pipe-num">${nDel}</span>
         <span class="rb-pipe-label">Delivered</span>
+        ${nDel > 0 ? `<span class="rb-pipe-hint">needs archiving</span>` : ''}
       </div>
       <div class="rb-pipe-arrow">→</div>
       <div class="rb-pipe-step rb-pipe--archived">
@@ -4134,6 +4166,25 @@ function renderReviewBooksView() {
         <span class="rb-pipe-label">Archived</span>
       </div>
     </div>
+
+    ${nDel > 0 ? `
+    <div class="rb-section rb-section--needs-archive">
+      <div class="rb-section-hd">
+        <span class="rb-needs-archive-icon">⚑</span>
+        <span class="rb-section-title">Needs Archiving</span>
+        <span class="rb-count rb-count--amber">${nDel}</span>
+        <span class="rb-section-hint">Archive delivered books to keep your pipeline clean and enable repurposing</span>
+        <button class="rb-act-btn rb-act--archive-all" data-rb-archive-all>Archive All</button>
+      </div>
+      <div class="rb-table-wrap rb-table-wrap--amber">
+        <table class="rb-table">
+          <thead><tr>
+            <th>Client</th><th>Book</th><th>As Of</th><th>Delivered</th><th colspan="2">Auto-Archive</th><th></th>
+          </tr></thead>
+          <tbody>${deliveredRows}</tbody>
+        </table>
+      </div>
+    </div>` : ''}
 
     <div class="rb-section">
       <div class="rb-section-hd">
@@ -4575,6 +4626,12 @@ function attachEventListeners() {
         if (action === 'deliver') book.status = 'delivered';
         if (action === 'archive') book.status = 'archived';
       }
+      renderApp(); return;
+    }
+
+    // Archive all delivered books at once
+    if (e.target.closest('[data-rb-archive-all]')) {
+      reviewBooks.filter(b => b.status === 'delivered').forEach(b => { b.status = 'archived'; });
       renderApp(); return;
     }
 
