@@ -696,6 +696,200 @@ function getActiveBanner() {
   ) || null;
 }
 
+// ─── FEATURE VOTING ───────────────────────────────────────
+const FEATURE_REQUESTS = [
+  { id:'fr001', title:'Automated Review Book Prep',    cat:'ai',
+    desc:'Auto-populate performance, holdings, and allocation data directly into review book sections — zero copy-paste.',
+    votes:34, status:'planning' },
+  { id:'fr002', title:'Mobile App',                    cat:'mobile',
+    desc:'Native iOS and Android app for reviewing client data and responding to inbox messages on the go.',
+    votes:31, status:'backlog' },
+  { id:'fr003', title:'AI Meeting Summary',            cat:'ai',
+    desc:'Transcribe client meetings and auto-generate structured notes with action items and follow-ups.',
+    votes:28, status:'backlog' },
+  { id:'fr004', title:'Client Portal',                 cat:'client',
+    desc:'Give clients a read-only view of their own dashboard — holdings, performance, and upcoming milestones.',
+    votes:23, status:'backlog' },
+  { id:'fr005', title:'DocuSign Integration',          cat:'integrations',
+    desc:'Send, track, and store signed documents directly from the workstation without switching tools.',
+    votes:19, status:'backlog' },
+  { id:'fr006', title:'Performance Attribution',       cat:'reporting',
+    desc:'Drill into returns by factor, sector, and manager to explain performance vs benchmark in plain language.',
+    votes:15, status:'backlog' },
+  { id:'fr007', title:'Bulk Wire Instructions',        cat:'efficiency',
+    desc:'Generate wire instruction PDFs for all client accounts in a single batch export.',
+    votes:12, status:'backlog' },
+  { id:'fr008', title:'Birthday Outreach Automation',  cat:'client',
+    desc:'Auto-queue personalized birthday messages and gift suggestions 2 weeks before each client milestone.',
+    votes:8,  status:'backlog' },
+];
+
+const VOTE_CAT_META = {
+  ai:           { label:'AI',           bg:'#F3E8FF', color:'#7C3AED' },
+  mobile:       { label:'Mobile',       bg:'#E0F2FE', color:'#0284C7' },
+  client:       { label:'Client',       bg:'#D1FAE5', color:'#059669' },
+  integrations: { label:'Integrations', bg:'#FEE2E2', color:'#DC2626' },
+  reporting:    { label:'Reporting',    bg:'#FEF3C7', color:'#B45309' },
+  efficiency:   { label:'Efficiency',   bg:'#E0E7FF', color:'#4338CA' },
+};
+
+const VOTE_TIERS = [
+  { name:'Contributor', icon:'●', min:0,   cls:'vt-contributor' },
+  { name:'Influencer',  icon:'◆', min:50,  cls:'vt-influencer'  },
+  { name:'Insider',     icon:'★', min:150, cls:'vt-insider'     },
+];
+const WEEKLY_ALLOC = 5;
+
+function getVoteState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('gc_vote_state') || 'null');
+    if (!saved) return freshVoteState();
+    // Reset weekly count if it's a new week
+    const thisWeek = voteWeekKey();
+    if (saved.weekKey !== thisWeek) { saved.weekKey = thisWeek; saved.weekUsed = 0; }
+    return saved;
+  } catch { return freshVoteState(); }
+}
+function freshVoteState() {
+  return { points:0, votedIds:[], weekKey: voteWeekKey(), weekUsed:0, streak:0, lastVoteDate:null };
+}
+function voteWeekKey() {
+  const d = new Date(TODAY); d.setDate(d.getDate() - d.getDay());
+  return d.toISOString().split('T')[0];
+}
+function saveVoteState(vs) { localStorage.setItem('gc_vote_state', JSON.stringify(vs)); }
+function voteTier(pts) { return [...VOTE_TIERS].reverse().find(t => pts >= t.min) || VOTE_TIERS[0]; }
+function voteNextTier(pts) { return VOTE_TIERS.find(t => t.min > pts) || null; }
+
+function openVotePanel() {
+  let panel = document.getElementById('vote-panel');
+  if (panel) { panel.classList.toggle('open'); renderVotePanelContent(); return; }
+
+  panel = document.createElement('div');
+  panel.id = 'vote-panel';
+  panel.className = 'vote-panel';
+  document.body.appendChild(panel);
+
+  const bd = document.createElement('div');
+  bd.id = 'vote-backdrop';
+  bd.className = 'vote-backdrop';
+  bd.addEventListener('click', closeVotePanel);
+  document.body.appendChild(bd);
+
+  renderVotePanelContent();
+  requestAnimationFrame(() => { panel.classList.add('open'); bd.classList.add('open'); });
+}
+
+function closeVotePanel() {
+  document.getElementById('vote-panel')?.classList.remove('open');
+  document.getElementById('vote-backdrop')?.classList.remove('open');
+}
+
+function renderVotePanelContent() {
+  const panel = document.getElementById('vote-panel');
+  if (!panel) return;
+  const vs = getVoteState();
+  const tier = voteTier(vs.points);
+  const next = voteNextTier(vs.points);
+  const remaining = Math.max(0, WEEKLY_ALLOC - vs.weekUsed);
+  const maxVotes = Math.max(...FEATURE_REQUESTS.map(f => f.votes + (vs.votedIds.includes(f.id) ? 1 : 0)));
+  const tierPct = next ? Math.round(((vs.points - voteTier(vs.points).min) / (next.min - voteTier(vs.points).min)) * 100) : 100;
+
+  panel.innerHTML = `
+    <div class="vp-header">
+      <div>
+        <div class="vp-title">Feature Votes</div>
+        <div class="vp-sub">Shape the roadmap</div>
+      </div>
+      <button class="vp-close" data-vote-close>✕</button>
+    </div>
+
+    <div class="vp-advisor-card">
+      <div class="vp-card-top">
+        <span class="vp-tier-badge ${tier.cls}">${tier.icon} ${tier.name}</span>
+        <span class="vp-points">${vs.points} pts</span>
+      </div>
+      <div class="vp-tier-bar">
+        <div class="vp-tier-fill" style="width:${tierPct}%"></div>
+      </div>
+      <div class="vp-card-meta">
+        ${next ? `<span>${next.min - vs.points} pts to ${next.name}</span>` : `<span class="vp-max">🏆 Max tier — thank you!</span>`}
+        <div class="vp-micro-stats">
+          ${vs.streak > 1 ? `<span class="vp-micro">🔥 ${vs.streak}d streak</span>` : ''}
+          <span class="vp-micro">🗳 ${vs.votedIds.length} voted</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="vp-alloc">
+      <span class="vp-alloc-label">Weekly votes — ${remaining} of ${WEEKLY_ALLOC} remaining</span>
+      <div class="vp-pips">
+        ${Array.from({length: WEEKLY_ALLOC}, (_,i) =>
+          `<span class="vp-pip${i >= remaining ? ' vp-pip--used' : ''}"></span>`).join('')}
+      </div>
+    </div>
+
+    <div class="vp-features">
+      ${FEATURE_REQUESTS.map(f => {
+        const voted = vs.votedIds.includes(f.id);
+        const count = f.votes + (voted ? 1 : 0);
+        const pct   = Math.round(count / maxVotes * 100);
+        const cat   = VOTE_CAT_META[f.cat] || VOTE_CAT_META.efficiency;
+        const canVote = !voted && remaining > 0;
+        return `<div class="vp-feat${voted?' vp-feat--voted':''}">
+          <div class="vp-feat-tags">
+            <span class="vp-cat-chip" style="background:${cat.bg};color:${cat.color}">${cat.label}</span>
+            ${f.status === 'planning' ? '<span class="vp-planning-chip">📋 In Planning</span>' : ''}
+          </div>
+          <div class="vp-feat-title">${f.title}</div>
+          <div class="vp-feat-desc">${f.desc}</div>
+          <div class="vp-feat-foot">
+            <div class="vp-vote-track">
+              <div class="vp-vote-fill" style="width:${pct}%"></div>
+              <span class="vp-vote-count">${count}</span>
+            </div>
+            <button class="vp-vote-btn${voted?' vp-vote-btn--done':''}${!canVote&&!voted?' vp-vote-btn--locked':''}"
+              data-vote-cast="${f.id}" ${!canVote ? 'disabled' : ''}>
+              ${voted ? '✓ Voted' : '▲ Vote · +10pts'}
+            </button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="vp-footer">+10 pts per vote · Resets every Monday · ${WEEKLY_ALLOC} votes/week</div>`;
+
+  // Wire vote buttons
+  panel.querySelectorAll('[data-vote-cast]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const fid = btn.getAttribute('data-vote-cast');
+      const vs2 = getVoteState();
+      if (vs2.votedIds.includes(fid) || vs2.weekUsed >= WEEKLY_ALLOC) return;
+      const prevTier = voteTier(vs2.points).name;
+      vs2.votedIds.push(fid);
+      vs2.weekUsed++;
+      vs2.points += 10;
+      vs2.streak = vs2.lastVoteDate === TODAY ? vs2.streak : vs2.streak + 1;
+      vs2.lastVoteDate = TODAY;
+      saveVoteState(vs2);
+      const newTier = voteTier(vs2.points).name;
+      renderVotePanelContent();
+      if (newTier !== prevTier) showTierCelebration(newTier);
+      // Refresh sidebar badge
+      renderApp();
+    });
+  });
+}
+
+function showTierCelebration(tierName) {
+  const toast = document.createElement('div');
+  toast.className = 'vote-tier-toast';
+  toast.innerHTML = `<span class="vtt-icon">🎉</span><span>You reached <strong>${tierName}</strong>!</span>`;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+}
+
 // ─── ROUTER ───────────────────────────────────────────────
 function parseRoute() {
   const hash = window.location.hash || '#/';
@@ -821,6 +1015,15 @@ function renderSidebar() {
         </div>
         <button class="sidebar-ann-reset" data-reset-banners title="Reset dismissed announcements">↺ Announcements</button>
       </div>
+      <button class="sidebar-vote-trigger" data-vote-open>
+        <span class="svt-icon">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 1L8 4.5H12L9 7l1.2 4L6.5 9 3.3 11 4.5 7 1.5 4.5H5.5z"/>
+          </svg>
+        </span>
+        <span class="svt-label">Feature Votes</span>
+        ${(() => { const vs = getVoteState(); const rem = Math.max(0, WEEKLY_ALLOC - vs.weekUsed); return rem > 0 ? `<span class="svt-badge">${rem}</span>` : ''; })()}
+      </button>
     </aside>`;
   }
 
@@ -3568,6 +3771,10 @@ function attachGlobalTaskListeners() {
       openTaskPanel(card.getAttribute('data-task-id'));
       return;
     }
+
+    // Feature vote panel
+    if (e.target.closest('[data-vote-open]'))  { closeNotifPanel(); openVotePanel(); return; }
+    if (e.target.closest('[data-vote-close]')) { closeVotePanel(); return; }
 
     // Notification bell toggle
     if (e.target.closest('[data-notif-toggle]')) {
