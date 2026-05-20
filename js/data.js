@@ -97,10 +97,38 @@ export const clients = [
       { id: 'sr2', type: 'Investment Change', title: 'Increase PE Allocation — $10M', status: 'in_progress', priority: 'medium', createdDate: daysAgo(7), dueDate: daysFromNow(35), notes: 'Evaluating Apollo Fund VIII and Carlyle Partners VII. Confirm capital call schedule.' }
     ],
     accounts: [
-      { name: 'Harrington Family Trust',         num: 'GC-2015-001-HFT', type: 'Revocable Trust'    },
-      { name: 'Harrington Taxable Account',       num: 'GC-2015-001-TAX', type: 'Taxable Brokerage'  },
-      { name: 'Harrington IRA — Robert',          num: 'GC-2015-001-IRA', type: 'Traditional IRA'    },
-      { name: 'Harrington Charitable Foundation', num: 'GC-2015-001-DAF', type: 'Donor Advised Fund'  }
+      // Trusts
+      { name:'Harrington Family Trust',              num:'GC-2015-001-HFT', type:'Revocable Trust',               group:'trust'      },
+      { name:'Harrington Irrev. Life Ins. Trust',    num:'GC-2015-001-ILT', type:'Irrevocable Life Ins. Trust',   group:'trust'      },
+      { name:'Robert Harrington GST Trust',          num:'GC-2015-001-GST', type:'Generation-Skipping Trust',     group:'trust'      },
+      { name:'Catherine Harrington GST Trust',       num:'GC-2015-001-CGS', type:'Generation-Skipping Trust',     group:'trust'      },
+      { name:"Harrington Children's Trust — James",  num:'GC-2015-001-CTJ', type:"Children's Trust",              group:'trust'      },
+      { name:"Harrington Children's Trust — Emma",   num:'GC-2015-001-CTE', type:"Children's Trust",              group:'trust'      },
+      { name:'Harrington Dynasty Trust',             num:'GC-2015-001-DYN', type:'Dynasty Trust',                 group:'trust'      },
+      { name:'Harrington Grandchildren Trust',       num:'GC-2015-001-GCT', type:'Grandchildren Trust',           group:'trust'      },
+      // Retirement
+      { name:'Robert Harrington Traditional IRA',    num:'GC-2015-001-IRA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Catherine Harrington Traditional IRA', num:'GC-2015-001-CIA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Robert Harrington Roth IRA',           num:'GC-2015-001-RTH', type:'Roth IRA',                      group:'retirement' },
+      { name:'Catherine Harrington Roth IRA',        num:'GC-2015-001-CRT', type:'Roth IRA',                      group:'retirement' },
+      { name:'Harrington 401(k) — Robert',           num:'GC-2015-001-401', type:'401(k)',                        group:'retirement' },
+      { name:'Harrington SEP-IRA',                   num:'GC-2015-001-SEP', type:'SEP-IRA',                       group:'retirement' },
+      // Taxable
+      { name:'Harrington Joint Taxable Account',     num:'GC-2015-001-JNT', type:'Joint Brokerage',               group:'taxable'    },
+      { name:'Robert Harrington Individual Account', num:'GC-2015-001-IND', type:'Individual Brokerage',          group:'taxable'    },
+      { name:'Catherine Harrington Individual Acct', num:'GC-2015-001-CAT', type:'Individual Brokerage',          group:'taxable'    },
+      { name:'Harrington Capital Account',           num:'GC-2015-001-CAP', type:'Taxable Brokerage',             group:'taxable'    },
+      // Entities
+      { name:'Harrington Capital Partners LP',       num:'GC-2015-001-HCP', type:'Limited Partnership',           group:'entity'     },
+      { name:'Harrington Real Estate LLC',           num:'GC-2015-001-REL', type:'LLC',                           group:'entity'     },
+      { name:'Harrington Ventures LLC',              num:'GC-2015-001-VEN', type:'LLC',                           group:'entity'     },
+      { name:'RCH Holdings LLC',                     num:'GC-2015-001-RCH', type:'LLC',                           group:'entity'     },
+      { name:'Harrington Family Office LLC',         num:'GC-2015-001-FO',  type:'LLC',                           group:'entity'     },
+      // Charitable
+      { name:'Harrington Family Foundation',         num:'GC-2015-001-DAF', type:'Donor Advised Fund',            group:'charitable' },
+      { name:'Harrington Charitable Remainder Trust',num:'GC-2015-001-CRT', type:'Charitable Remainder Trust',    group:'charitable' },
+      { name:'Harrington Charitable Lead Trust',     num:'GC-2015-001-CLT', type:'Charitable Lead Trust',         group:'charitable' },
+      { name:"Catherine's Art Foundation",           num:'GC-2015-001-ART', type:'Private Foundation',            group:'charitable' },
     ]
   },
 
@@ -165,9 +193,24 @@ export const clients = [
       { id: 'sr3', type: 'Document Request', title: 'Annual Tax Documents — 2025', status: 'open', priority: 'medium', createdDate: daysAgo(20), dueDate: daysFromNow(19), notes: 'Coordinate with CPA Patricia Moore on 1099s and K-1s.' }
     ],
     accounts: [
-      { name: 'Whitfield Revocable Trust',        num: 'GC-2008-002-WRT', type: 'Revocable Trust'    },
-      { name: 'Whitfield IRA',                    num: 'GC-2008-002-IRA', type: 'Traditional IRA'    },
-      { name: 'Whitfield Taxable Account',         num: 'GC-2008-002-TAX', type: 'Taxable Brokerage'  }
+      // Trusts
+      { name:'Whitfield Revocable Trust',            num:'GC-2008-002-WRT', type:'Revocable Trust',               group:'trust'      },
+      { name:'Whitfield Irrevocable Trust',          num:'GC-2008-002-WIT', type:'Irrevocable Trust',             group:'trust'      },
+      { name:'Harold Whitfield Bypass Trust',        num:'GC-2008-002-BYP', type:'Bypass Trust',                  group:'trust'      },
+      { name:'Whitfield GST Trust',                  num:'GC-2008-002-GST', type:'Generation-Skipping Trust',     group:'trust'      },
+      // Retirement
+      { name:'Margaret Whitfield Traditional IRA',   num:'GC-2008-002-IRA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Margaret Whitfield Roth IRA',          num:'GC-2008-002-RTH', type:'Roth IRA',                      group:'retirement' },
+      { name:'Harold Whitfield Inherited IRA',       num:'GC-2008-002-INH', type:'Inherited IRA',                 group:'retirement' },
+      // Taxable
+      { name:'Whitfield Joint Taxable Account',      num:'GC-2008-002-JNT', type:'Joint Brokerage',               group:'taxable'    },
+      { name:'Whitfield Individual Account',         num:'GC-2008-002-IND', type:'Individual Brokerage',          group:'taxable'    },
+      // Entities
+      { name:'Whitfield Properties LLC',             num:'GC-2008-002-LLC', type:'LLC',                           group:'entity'     },
+      { name:'Whitfield Family Partners LP',         num:'GC-2008-002-FLP', type:'Family Limited Partnership',    group:'entity'     },
+      // Charitable
+      { name:'Whitfield Charitable Foundation',      num:'GC-2008-002-FDN', type:'Private Foundation',            group:'charitable' },
+      { name:'Whitfield Charitable Remainder Trust', num:'GC-2008-002-CRT', type:'Charitable Remainder Trust',    group:'charitable' },
     ]
   },
 
@@ -229,9 +272,19 @@ export const clients = [
       { id: 'sr1', type: 'Account Change', title: "Increase 529 Contribution — Connor", status: 'open', priority: 'medium', createdDate: daysAgo(10), dueDate: daysFromNow(30), notes: 'Max contribution for 2026 before Connor graduates. Confirm gift tax exclusion.' }
     ],
     accounts: [
-      { name: 'Morrison Joint Account',            num: 'GC-2019-003-JNT', type: 'Joint Brokerage'    },
-      { name: 'Morrison IRA — David',              num: 'GC-2019-003-IRA', type: 'Traditional IRA'    },
-      { name: 'Morrison Roth — Sarah',             num: 'GC-2019-003-RTH', type: 'Roth IRA'           }
+      // Trusts
+      { name:'Morrison Family Trust',                num:'GC-2019-003-MFT', type:'Revocable Trust',               group:'trust'      },
+      { name:'Morrison Irrevocable Trust',           num:'GC-2019-003-MIT', type:'Irrevocable Trust',             group:'trust'      },
+      // Retirement
+      { name:'David Morrison Traditional IRA',       num:'GC-2019-003-IRA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Sarah Morrison Traditional IRA',       num:'GC-2019-003-SIA', type:'Traditional IRA',               group:'retirement' },
+      { name:'David Morrison Roth IRA',              num:'GC-2019-003-RTH', type:'Roth IRA',                      group:'retirement' },
+      { name:'Sarah Morrison Roth IRA',              num:'GC-2019-003-SRT', type:'Roth IRA',                      group:'retirement' },
+      // Taxable
+      { name:'Morrison Joint Account',               num:'GC-2019-003-JNT', type:'Joint Brokerage',               group:'taxable'    },
+      { name:'David Morrison Individual Account',    num:'GC-2019-003-IND', type:'Individual Brokerage',          group:'taxable'    },
+      // Entities
+      { name:'Morrison Capital LLC',                 num:'GC-2019-003-LLC', type:'LLC',                           group:'entity'     },
     ]
   },
 
@@ -296,9 +349,15 @@ export const clients = [
       { id: 'sr4', type: 'Estate Planning', title: 'Draft New Will & POA', status: 'open', priority: 'high', createdDate: daysAgo(30), dueDate: daysFromNow(30), notes: 'Existing will names William. Urgent to update.' }
     ],
     accounts: [
-      { name: 'Bancroft Individual Account',       num: 'GC-2021-004-IND', type: 'Individual Brokerage'},
-      { name: 'Bancroft IRA',                      num: 'GC-2021-004-IRA', type: 'Traditional IRA'    },
-      { name: 'Bancroft Roth IRA',                 num: 'GC-2021-004-RTH', type: 'Roth IRA'           }
+      // Trusts
+      { name:'Bancroft Individual Trust',            num:'GC-2021-004-TRT', type:'Revocable Trust',               group:'trust'      },
+      // Retirement
+      { name:'Elizabeth Bancroft Traditional IRA',   num:'GC-2021-004-IRA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Elizabeth Bancroft Roth IRA',          num:'GC-2021-004-RTH', type:'Roth IRA',                      group:'retirement' },
+      { name:'Bancroft 401(k) Rollover',             num:'GC-2021-004-ROL', type:'Rollover IRA',                  group:'retirement' },
+      // Taxable
+      { name:'Bancroft Individual Account',          num:'GC-2021-004-IND', type:'Individual Brokerage',          group:'taxable'    },
+      { name:'Bancroft Joint Account',               num:'GC-2021-004-JNT', type:'Joint Brokerage',               group:'taxable'    },
     ]
   },
 
@@ -361,10 +420,23 @@ export const clients = [
       { id: 'sr1', type: 'Estate Planning', title: 'Add Grandchild to Family Trust', status: 'in_progress', priority: 'low', createdDate: daysAgo(20), dueDate: daysFromNow(45), notes: 'Add Henry Augustine (newborn) as trust beneficiary.' }
     ],
     accounts: [
-      { name: 'Augustine Family Trust III',        num: 'GC-2012-005-AFT', type: 'Irrevocable Trust'  },
-      { name: 'Augustine IRA — Thomas',            num: 'GC-2012-005-IRA', type: 'Traditional IRA'    },
-      { name: 'Augustine Taxable Account',         num: 'GC-2012-005-TAX', type: 'Taxable Brokerage'  },
-      { name: 'Augustine Charitable Trust',        num: 'GC-2012-005-CRT', type: 'Charitable Rem. Trust'}
+      // Trusts
+      { name:'Augustine Family Trust III',           num:'GC-2012-005-AFT', type:'Irrevocable Trust',             group:'trust'      },
+      { name:'Augustine Revocable Living Trust',     num:'GC-2012-005-RLT', type:'Revocable Trust',               group:'trust'      },
+      { name:'Augustine GST Trust',                  num:'GC-2012-005-GST', type:'Generation-Skipping Trust',     group:'trust'      },
+      { name:"Augustine Children's Trust",           num:'GC-2012-005-CTR', type:"Children's Trust",              group:'trust'      },
+      // Retirement
+      { name:'Thomas Augustine IRA',                 num:'GC-2012-005-IRA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Thomas Augustine Roth IRA',            num:'GC-2012-005-RTH', type:'Roth IRA',                      group:'retirement' },
+      // Taxable
+      { name:'Augustine Individual Account',         num:'GC-2012-005-IND', type:'Individual Brokerage',          group:'taxable'    },
+      { name:'Augustine Joint Taxable Account',      num:'GC-2012-005-JNT', type:'Joint Brokerage',               group:'taxable'    },
+      // Entities
+      { name:'Augustine Capital Partners LLC',       num:'GC-2012-005-LLC', type:'LLC',                           group:'entity'     },
+      { name:'Augustine Holdings LP',                num:'GC-2012-005-HLP', type:'Limited Partnership',           group:'entity'     },
+      // Charitable
+      { name:'Augustine Charitable Trust',           num:'GC-2012-005-CRT', type:'Charitable Remainder Trust',    group:'charitable' },
+      { name:'Augustine Family Foundation',          num:'GC-2012-005-FDN', type:'Private Foundation',            group:'charitable' },
     ]
   },
 
@@ -426,9 +498,14 @@ export const clients = [
       { id: 'sr3', type: 'Account Review', title: 'Annual Review — OVERDUE', status: 'open', priority: 'high', createdDate: daysAgo(30), dueDate: daysAgo(0), notes: 'Annual review has not been scheduled. Last proper review was March 2025.' }
     ],
     accounts: [
-      { name: 'Petrov Capital LLC',                num: 'GC-2020-006-LLC', type: 'LLC Account'        },
-      { name: 'Petrov Individual Account',         num: 'GC-2020-006-IND', type: 'Individual Brokerage'},
-      { name: 'Petrov IRA',                        num: 'GC-2020-006-IRA', type: 'Traditional IRA'    }
+      // Entities
+      { name:'Petrov Capital LLC',                   num:'GC-2020-006-LLC', type:'LLC',                           group:'entity'     },
+      { name:'Petrov Global Partners LP',            num:'GC-2020-006-GLP', type:'Limited Partnership',           group:'entity'     },
+      // Retirement
+      { name:'Alexander Petrov Traditional IRA',     num:'GC-2020-006-IRA', type:'Traditional IRA',               group:'retirement' },
+      // Taxable
+      { name:'Petrov Individual Account',            num:'GC-2020-006-IND', type:'Individual Brokerage',          group:'taxable'    },
+      { name:'Petrov Joint Account',                 num:'GC-2020-006-JNT', type:'Joint Brokerage',               group:'taxable'    },
     ]
   },
 
@@ -489,9 +566,13 @@ export const clients = [
       { id: 'sr1', type: 'Investment Change', title: 'RSU Vest Proceeds — Diversification Plan', status: 'in_progress', priority: 'high', createdDate: daysAgo(5), dueDate: daysFromNow(22), notes: 'Prepare allocation plan for $2.1M RSU proceeds. Reduce VRTX concentration to <40%. Present options by April 10.' }
     ],
     accounts: [
-      { name: 'Chen Individual Account',           num: 'GC-2022-007-IND', type: 'Individual Brokerage'},
-      { name: 'Chen 401(k) Rollover IRA',          num: 'GC-2022-007-IRA', type: 'Rollover IRA'       },
-      { name: 'Chen Roth IRA',                     num: 'GC-2022-007-RTH', type: 'Roth IRA'           }
+      // Retirement
+      { name:'Amanda Chen 401(k) Rollover IRA',      num:'GC-2022-007-IRA', type:'Rollover IRA',                  group:'retirement' },
+      { name:'Amanda Chen Roth IRA',                 num:'GC-2022-007-RTH', type:'Roth IRA',                      group:'retirement' },
+      // Taxable
+      { name:'Chen Individual Account',              num:'GC-2022-007-IND', type:'Individual Brokerage',          group:'taxable'    },
+      // Trusts
+      { name:'Chen Revocable Trust',                 num:'GC-2022-007-TRT', type:'Revocable Trust',               group:'trust'      },
     ]
   },
 
@@ -552,10 +633,21 @@ export const clients = [
     ],
     serviceRequests: [],
     accounts: [
-      { name: 'Sullivan Joint Account',            num: 'GC-2010-008-JNT', type: 'Joint Brokerage'    },
-      { name: 'Sullivan IRA — George',             num: 'GC-2010-008-IRA', type: 'Traditional IRA'    },
-      { name: 'Sullivan Roth — Patricia',          num: 'GC-2010-008-RTH', type: 'Roth IRA'           },
-      { name: 'Sullivan Retirement Trust',         num: 'GC-2010-008-TRT', type: 'Irrevocable Trust'  }
+      // Trusts
+      { name:'Sullivan Retirement Trust',            num:'GC-2010-008-TRT', type:'Irrevocable Trust',             group:'trust'      },
+      { name:'Sullivan Family Revocable Trust',      num:'GC-2010-008-FRT', type:'Revocable Trust',               group:'trust'      },
+      { name:'Sullivan GST Trust',                   num:'GC-2010-008-GST', type:'Generation-Skipping Trust',     group:'trust'      },
+      // Retirement
+      { name:'George Sullivan Traditional IRA',      num:'GC-2010-008-IRA', type:'Traditional IRA',               group:'retirement' },
+      { name:'Patricia Sullivan Traditional IRA',    num:'GC-2010-008-PIA', type:'Traditional IRA',               group:'retirement' },
+      { name:'George Sullivan Roth IRA',             num:'GC-2010-008-RTH', type:'Roth IRA',                      group:'retirement' },
+      // Taxable
+      { name:'Sullivan Joint Account',               num:'GC-2010-008-JNT', type:'Joint Brokerage',               group:'taxable'    },
+      { name:'George Sullivan Individual Account',   num:'GC-2010-008-IND', type:'Individual Brokerage',          group:'taxable'    },
+      // Entities
+      { name:'Sullivan Family LLC',                  num:'GC-2010-008-LLC', type:'LLC',                           group:'entity'     },
+      // Charitable
+      { name:'Sullivan Charitable Foundation',       num:'GC-2010-008-FDN', type:'Private Foundation',            group:'charitable' },
     ]
   }
 

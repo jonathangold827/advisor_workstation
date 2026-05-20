@@ -4636,35 +4636,64 @@ function openWireModal(clientId) {
   const client = clients.find(c => c.id === clientId);
   if (!client) return;
   const w = advisor.wire;
-  const today = new Date(TODAY).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const today = new Date(TODAY).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
 
   const existing = document.getElementById('wire-modal-overlay');
   if (existing) existing.remove();
 
-  function ffcHtml(acct) {
-    if (!acct) return `
-      <div class="wire-ffc-empty">
-        <span>← Select an account above to populate wire instructions</span>
+  const GROUP_META = {
+    trust:      { label:'Trusts',              icon:'⬡' },
+    retirement: { label:'Retirement',          icon:'◎' },
+    taxable:    { label:'Taxable Brokerage',   icon:'◈' },
+    entity:     { label:'Entities & Partnerships', icon:'⬟' },
+    charitable: { label:'Charitable',          icon:'◇' },
+    other:      { label:'Other',               icon:'○' },
+  };
+
+  // Build grouped structure
+  const groups = {};
+  client.accounts.forEach((a, i) => {
+    const g = a.group || 'other';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push({ ...a, idx: i });
+  });
+
+  function railGroupsHtml(filter = '') {
+    const q = filter.toLowerCase();
+    return Object.entries(groups).map(([g, accts]) => {
+      const visible = q ? accts.filter(a => a.name.toLowerCase().includes(q) || a.num.toLowerCase().includes(q)) : accts;
+      if (!visible.length) return '';
+      const meta = GROUP_META[g] || GROUP_META.other;
+      return `<div class="wire-rail-group" data-group="${g}">
+        <div class="wire-rail-group-hd">${meta.icon} ${meta.label} <span class="wire-rail-count">${visible.length}</span></div>
+        ${visible.map(a => `
+          <button class="wire-rail-item" data-acct-idx="${a.idx}">
+            <span class="wire-rail-name">${a.name}</span>
+            <span class="wire-rail-num">${a.num}</span>
+          </button>`).join('')}
       </div>`;
-    return `
-      <table class="wire-table wire-table--highlight">
-        <tr><td class="wire-field">Account Name</td><td class="wire-value">${acct.name}</td></tr>
-        <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${acct.num}</td></tr>
-        <tr><td class="wire-field">Account Type</td><td class="wire-value">${acct.type}</td></tr>
-        <tr><td class="wire-field">Reference / Memo</td><td class="wire-value">${client.lastName} · ${acct.num}</td></tr>
-      </table>`;
+    }).join('');
+  }
+
+  function ffcHtml(acct) {
+    return `<table class="wire-table wire-table--highlight">
+      <tr><td class="wire-field">Account Name</td><td class="wire-value">${acct.name}</td></tr>
+      <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${acct.num}</td></tr>
+      <tr><td class="wire-field">Account Type</td><td class="wire-value">${acct.type}</td></tr>
+      <tr><td class="wire-field">Reference / Memo</td><td class="wire-value">${client.lastName} · ${acct.num}</td></tr>
+    </table>`;
   }
 
   const overlay = document.createElement('div');
   overlay.id = 'wire-modal-overlay';
   overlay.className = 'wire-overlay';
   overlay.innerHTML = `
-    <div class="wire-modal" role="dialog" aria-modal="true" aria-label="Wire Instructions">
+    <div class="wire-modal wire-modal--split" role="dialog" aria-modal="true">
 
       <div class="wire-modal-header">
         <div>
           <div class="wire-modal-title">Wire Transfer Instructions</div>
-          <div class="wire-modal-sub">${client.displayName} · ${client.accounts.length} account${client.accounts.length !== 1 ? 's' : ''}</div>
+          <div class="wire-modal-sub">${client.displayName} · ${client.accounts.length} accounts</div>
         </div>
         <div class="wire-modal-actions">
           <button class="wire-btn-print" id="wire-print-btn" disabled>Print / Save PDF</button>
@@ -4672,76 +4701,83 @@ function openWireModal(clientId) {
         </div>
       </div>
 
-      <div class="wire-acct-picker" id="wire-acct-picker">
-        <div class="wire-acct-picker-label">Select account</div>
-        <div class="wire-acct-list">
-          ${client.accounts.map((a, i) => `
-            <button class="wire-acct-card" data-acct-idx="${i}">
-              <div class="wire-acct-name">${a.name}</div>
-              <div class="wire-acct-type">${a.type}</div>
-            </button>`).join('')}
-        </div>
-      </div>
+      <div class="wire-split-body">
 
-      <div class="wire-doc" id="wire-doc">
-        <div class="wire-letterhead">
-          <div class="wire-lh-firm">${advisor.firm}</div>
-          <div class="wire-lh-meta">${advisor.name} · ${advisor.title}<br>${w.address}</div>
+        <!-- Left rail: searchable account list -->
+        <div class="wire-rail">
+          <div class="wire-rail-search-wrap">
+            <input class="wire-rail-search" id="wire-search" placeholder="Search accounts…" autocomplete="off">
+          </div>
+          <div class="wire-rail-groups" id="wire-rail-groups">
+            ${railGroupsHtml()}
+          </div>
         </div>
 
-        <h2 class="wire-doc-title">Incoming Wire Transfer Instructions</h2>
-        <p class="wire-doc-intro">Please use the following instructions to initiate a wire transfer to your Gold Capital account. Contact us with any questions before initiating the transfer.</p>
-
-        <div class="wire-section-label">Receiving Bank</div>
-        <table class="wire-table">
-          <tr><td class="wire-field">Bank Name</td><td class="wire-value">${w.receivingBank}</td></tr>
-          <tr><td class="wire-field">ABA / Routing Number</td><td class="wire-value wire-mono">${w.abaRouting}</td></tr>
-          <tr><td class="wire-field">SWIFT Code (International)</td><td class="wire-value wire-mono">${w.swiftCode}</td></tr>
-          <tr><td class="wire-field">DTC Number</td><td class="wire-value wire-mono">${w.dtc}</td></tr>
-        </table>
-
-        <div class="wire-section-label">Receiving Account</div>
-        <table class="wire-table">
-          <tr><td class="wire-field">Account Name</td><td class="wire-value">${w.firmAccountName}</td></tr>
-          <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${w.firmAccountNum}</td></tr>
-        </table>
-
-        <div class="wire-section-label">For Further Credit (FFC) — Client Account</div>
-        <div id="wire-ffc">${ffcHtml(null)}</div>
-
-        <div class="wire-note" id="wire-note" style="display:none">
-          <strong>Important:</strong> Always include the FFC account name and number in your wire instructions. Wires received without the FFC reference may be delayed. For questions contact ${advisor.name} at ${w.phone}.
+        <!-- Right pane: instructions -->
+        <div class="wire-detail" id="wire-detail">
+          <div class="wire-detail-empty">
+            <div class="wire-detail-empty-icon">←</div>
+            <div class="wire-detail-empty-msg">Select an account to generate wire instructions</div>
+          </div>
         </div>
 
-        <div class="wire-footer" id="wire-footer" style="display:none">
-          ${advisor.firm} · ${w.address} · ${w.phone}<br>
-          Document generated ${today} · For client use only — do not distribute
-        </div>
       </div>
     </div>`;
 
   document.body.appendChild(overlay);
 
-  // Account selection
-  let selectedIdx = null;
-  overlay.querySelectorAll('.wire-acct-card').forEach(btn => {
-    btn.addEventListener('click', () => {
-      overlay.querySelectorAll('.wire-acct-card').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedIdx = parseInt(btn.getAttribute('data-acct-idx'), 10);
-      const acct = client.accounts[selectedIdx];
-      document.getElementById('wire-ffc').innerHTML = ffcHtml(acct);
-      document.getElementById('wire-note').style.display = '';
-      document.getElementById('wire-footer').style.display = '';
-      document.getElementById('wire-print-btn').disabled = false;
-    });
+  // Search filter
+  document.getElementById('wire-search').addEventListener('input', e => {
+    document.getElementById('wire-rail-groups').innerHTML = railGroupsHtml(e.target.value);
+    wireBindRailItems();
   });
 
+  // Account selection — updates right pane in-place
+  function wireBindRailItems() {
+    overlay.querySelectorAll('.wire-rail-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        overlay.querySelectorAll('.wire-rail-item').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const acct = client.accounts[parseInt(btn.getAttribute('data-acct-idx'), 10)];
+        document.getElementById('wire-detail').innerHTML = `
+          <div class="wire-doc" id="wire-doc">
+            <div class="wire-letterhead">
+              <div class="wire-lh-firm">${advisor.firm}</div>
+              <div class="wire-lh-meta">${advisor.name} · ${advisor.title}<br>${w.address}</div>
+            </div>
+            <h2 class="wire-doc-title">Incoming Wire Transfer Instructions</h2>
+            <p class="wire-doc-intro">Use the following instructions to initiate a wire transfer to your Gold Capital account. Contact us before initiating the transfer.</p>
+            <div class="wire-section-label">Receiving Bank</div>
+            <table class="wire-table">
+              <tr><td class="wire-field">Bank Name</td><td class="wire-value">${w.receivingBank}</td></tr>
+              <tr><td class="wire-field">ABA / Routing Number</td><td class="wire-value wire-mono">${w.abaRouting}</td></tr>
+              <tr><td class="wire-field">SWIFT Code (International)</td><td class="wire-value wire-mono">${w.swiftCode}</td></tr>
+              <tr><td class="wire-field">DTC Number</td><td class="wire-value wire-mono">${w.dtc}</td></tr>
+            </table>
+            <div class="wire-section-label">Receiving Account</div>
+            <table class="wire-table">
+              <tr><td class="wire-field">Account Name</td><td class="wire-value">${w.firmAccountName}</td></tr>
+              <tr><td class="wire-field">Account Number</td><td class="wire-value wire-mono">${w.firmAccountNum}</td></tr>
+            </table>
+            <div class="wire-section-label">For Further Credit (FFC) — Client Account</div>
+            ${ffcHtml(acct)}
+            <div class="wire-note">
+              <strong>Important:</strong> Always include the FFC account name and number. Wires without FFC reference may be delayed. Questions? Contact ${advisor.name} at ${w.phone}.
+            </div>
+            <div class="wire-footer">
+              ${advisor.firm} · ${w.address} · ${w.phone}<br>
+              Generated ${today} · For client use only — do not distribute
+            </div>
+          </div>`;
+        document.getElementById('wire-print-btn').disabled = false;
+      });
+    });
+  }
+
+  wireBindRailItems();
   document.getElementById('wire-close-btn').addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  document.getElementById('wire-print-btn').addEventListener('click', () => {
-    if (selectedIdx !== null) window.print();
-  });
+  document.getElementById('wire-print-btn').addEventListener('click', () => window.print());
 }
 
 // ─── ANNOUNCEMENT BANNER ──────────────────────────────────
